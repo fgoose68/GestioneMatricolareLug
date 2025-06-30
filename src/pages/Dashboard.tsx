@@ -21,7 +21,6 @@ interface Discente {
   Matricola: string;
   "Grado militare": string;
   "Cognome e Nome del Discente": string;
-  [key: string]: any;
 }
 
 const Dashboard = () => {
@@ -45,25 +44,28 @@ const Dashboard = () => {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           
-          const discentiData: Discente[] = [];
-          const range = XLSX.utils.decode_range(worksheet['!ref']);
-          
-          for (let C = range.s.c; C <= range.e.c; ++C) {
-            const matricolaCell = worksheet[XLSX.utils.encode_cell({ r: 0, c: C })];
-            const gradoCell = worksheet[XLSX.utils.encode_cell({ r: 1, c: C })];
-            const cognomeNomeCell = worksheet[XLSX.utils.encode_cell({ r: 2, c: C })];
+          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-            if (matricolaCell?.v && gradoCell?.v && cognomeNomeCell?.v) {
-              discentiData.push({
-                "Matricola": String(matricolaCell.v),
-                "Grado militare": String(gradoCell.v),
-                "Cognome e Nome del Discente": String(cognomeNomeCell.v),
-              });
+          const discentiData = jsonData.map(row => {
+            const matricola = row.matricola || row.Matricola || row['{matricola}'];
+            const grado = row.grado || row.Grado || row['{grado}'];
+            const cognome = row.cognome || row.Cognome || row['{cognome}'];
+            const nome = row.nome || row.Nome || row['{nome}'];
+
+            if (!matricola || !grado || !cognome || !nome) {
+              console.warn("Riga saltata per dati mancanti:", row);
+              return null;
             }
-          }
+
+            return {
+              "Matricola": String(matricola),
+              "Grado militare": String(grado),
+              "Cognome e Nome del Discente": `${cognome} ${nome}`,
+            };
+          }).filter(d => d !== null) as Discente[];
 
           if (discentiData.length === 0) {
-            showError("Nessun discente trovato. Controlla che il file Excel sia formattato con i discenti in colonne (Matricola, Grado, Cognome/Nome nelle prime 3 righe).");
+            showError("Nessun discente trovato. Controlla che il file Excel abbia le colonne con intestazioni: matricola, grado, cognome, nome.");
             setDiscenti([]);
           } else {
             setDiscenti(discentiData);
@@ -265,7 +267,7 @@ const Dashboard = () => {
                 </Table>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Controlla che i dati corrispondano. L'app si aspetta che ogni colonna del file Excel contenga un discente, con Matricola (riga 1), Grado (riga 2) e Cognome/Nome (riga 3).
+                Controlla che i dati corrispondano. L'app si aspetta che il file Excel contenga le colonne con intestazioni: matricola, grado, cognome, nome.
               </p>
             </CardContent>
           </Card>
