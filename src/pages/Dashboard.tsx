@@ -32,6 +32,7 @@ const Dashboard = () => {
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [signer, setSigner] = useState<string>("Il Direttore del Corso");
+  const [localita, setLocalita] = useState<string>("");
 
   const handleExcelUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -44,8 +45,41 @@ const Dashboard = () => {
           const workbook = XLSX.read(data, { type: "array" });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
+
+          let foundTitolocorso = "";
+          let foundLocalita = "";
+
+          for (const cellAddress in worksheet) {
+            if (cellAddress[0] === '!') continue;
+
+            const cell = worksheet[cellAddress];
+            const cellValue = cell && cell.v ? String(cell.v).trim().toLowerCase() : "";
+
+            if (cellValue === "titolocorso" || cellValue === "località") {
+              const decodedCell = XLSX.utils.decode_cell(cellAddress);
+              const valueCellAddress = XLSX.utils.encode_cell({ r: decodedCell.r, c: decodedCell.c + 1 });
+              const valueCell = worksheet[valueCellAddress];
+              if (valueCell && valueCell.v) {
+                const value = String(valueCell.v);
+                if (cellValue === "titolocorso") {
+                  foundTitolocorso = value;
+                } else {
+                  foundLocalita = value;
+                }
+              }
+            }
+          }
+
+          if (foundTitolocorso) {
+            setCourseName(foundTitolocorso);
+            showSuccess(`Nome del corso "${foundTitolocorso}" importato da Excel.`);
+          }
+          if (foundLocalita) {
+            setLocalita(foundLocalita);
+            showSuccess(`Località "${foundLocalita}" importata da Excel.`);
+          }
           
-          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { range: 6 });
+          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { range: 7 });
 
           const discentiData = jsonData.map(row => {
             const matricola = row.matricola || row.Matricola || row['{matricola}'];
@@ -66,7 +100,7 @@ const Dashboard = () => {
           }).filter(d => d !== null) as Discente[];
 
           if (discentiData.length === 0) {
-            showError("Nessun discente trovato. Controlla che il file Excel abbia le colonne con intestazioni: matricola, grado, cognome, nome a partire dalla riga 7.");
+            showError("Nessun discente trovato. Controlla che il file Excel abbia le intestazioni a riga 8 e i dati da riga 9 in poi.");
             setDiscenti([]);
           } else {
             setDiscenti(discentiData);
@@ -115,6 +149,8 @@ const Dashboard = () => {
           });
 
           doc.setData({
+            titolocorso: courseName,
+            localita: localita,
             corso: courseName,
             periodo_corso: `dal ${formattedStartDate} al ${formattedEndDate}`,
             firmatario: `${signer}\nCol. Massimiliano Fortino`,
@@ -230,6 +266,12 @@ const Dashboard = () => {
                 </Popover>
               </div>
             </div>
+            {localita && (
+              <div className="space-y-2">
+                <Label>Località (da Excel)</Label>
+                <Input type="text" value={localita} readOnly className="bg-muted" />
+              </div>
+            )}
           </CardContent>
         </Card>
 
