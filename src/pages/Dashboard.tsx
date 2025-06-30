@@ -16,6 +16,7 @@ import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 import { saveAs } from "file-saver";
+import JSZip from "jszip";
 
 interface Discente {
   Matricola: string;
@@ -95,42 +96,50 @@ const Dashboard = () => {
       return;
     }
 
-    const toastId = showLoading("Generazione del documento in corso...");
+    const toastId = showLoading("Generazione dei documenti individuali in corso...");
 
     const reader = new FileReader();
     reader.onload = async (e) => {
       try {
         const content = e.target?.result as ArrayBuffer;
-        const zip = new PizZip(content);
-        const doc = new Docxtemplater(zip, {
-          paragraphLoop: true,
-          linebreaks: true,
-        });
-
+        const outputZip = new JSZip();
+        
         const formattedStartDate = format(startDate, "dd/MM/yyyy");
         const formattedEndDate = format(endDate, "dd/MM/yyyy");
 
-        doc.setData({
-          corso: courseName,
-          periodo_corso: `dal ${formattedStartDate} al ${formattedEndDate}`,
-          firmatario: `${signer}\nCol. Massimiliano Fortino`,
-          discenti: discenti.map(d => ({
-            grado: d["Grado militare"],
-            cognome_nome: d["Cognome e Nome del Discente"],
-            matricola: d.Matricola,
-          })),
-        });
+        for (const discente of discenti) {
+          const templateZip = new PizZip(content);
+          const doc = new Docxtemplater(templateZip, {
+            paragraphLoop: true,
+            linebreaks: true,
+          });
 
-        doc.render();
+          doc.setData({
+            corso: courseName,
+            periodo_corso: `dal ${formattedStartDate} al ${formattedEndDate}`,
+            firmatario: `${signer}\nCol. Massimiliano Fortino`,
+            grado: discente["Grado militare"],
+            cognome_nome: discente["Cognome e Nome del Discente"],
+            matricola: discente.Matricola,
+          });
 
-        const out = doc.getZip().generate({
-          type: "blob",
-          mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        });
+          doc.render();
 
-        saveAs(out, "documenti_generati.docx");
+          const out = doc.getZip().generate({
+            type: "blob",
+            mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          });
+          
+          const filename = `Attestato_${discente["Cognome e Nome del Discente"].replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+          outputZip.file(filename, out);
+        }
+
+        const zipBlob = await outputZip.generateAsync({ type: "blob" });
+        saveAs(zipBlob, "documenti_individuali.zip");
+
         dismissToast(toastId);
-        showSuccess("Documento Word generato con successo!");
+        showSuccess("Archivio ZIP con documenti individuali generato con successo!");
+
       } catch (error: any) {
         dismissToast(toastId);
         console.error("Errore nella generazione del documento:", error);
@@ -174,6 +183,10 @@ const Dashboard = () => {
               <Label htmlFor="word-file">Carica Template Word (.docx)</Label>
               <Input id="word-file" type="file" accept=".docx" onChange={handleWordUpload} />
               {wordFile && <p className="text-sm text-muted-foreground">Caricato: {wordFile.name}</p>}
+               <p className="text-xs text-muted-foreground pt-2">
+                Il template deve contenere i segnaposto singoli come {`{corso}`}, {`{grado}`}, {`{cognome_nome}`}, e {`{matricola}`}. 
+                Non usare il ciclo {`{#discenti}`}. Verrà generato un file ZIP con un documento per ogni discente.
+              </p>
             </div>
           </CardContent>
         </Card>
