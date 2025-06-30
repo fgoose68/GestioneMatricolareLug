@@ -21,7 +21,7 @@ interface Discente {
   Matricola: string;
   "Grado militare": string;
   "Cognome e Nome del Discente": string;
-  [key: string]: any; // Permette altre colonne nel file Excel
+  [key: string]: any;
 }
 
 const Dashboard = () => {
@@ -45,19 +45,34 @@ const Dashboard = () => {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           
-          const courseNameCell = worksheet["A1"]?.v;
-          if (typeof courseNameCell === 'string') {
-            setCourseName(courseNameCell);
-          } else {
-            showError("Nome del corso non trovato nella cella A1 del file Excel.");
+          const discentiData: Discente[] = [];
+          const range = XLSX.utils.decode_range(worksheet['!ref']);
+          
+          for (let C = range.s.c; C <= range.e.c; ++C) {
+            const matricolaCell = worksheet[XLSX.utils.encode_cell({ r: 0, c: C })];
+            const gradoCell = worksheet[XLSX.utils.encode_cell({ r: 1, c: C })];
+            const cognomeNomeCell = worksheet[XLSX.utils.encode_cell({ r: 2, c: C })];
+
+            if (matricolaCell?.v && gradoCell?.v && cognomeNomeCell?.v) {
+              discentiData.push({
+                "Matricola": String(matricolaCell.v),
+                "Grado militare": String(gradoCell.v),
+                "Cognome e Nome del Discente": String(cognomeNomeCell.v),
+              });
+            }
           }
 
-          const jsonData = XLSX.utils.sheet_to_json<Discente>(worksheet, { range: 1 });
-          setDiscenti(jsonData);
-          showSuccess(`File Excel "${file.name}" caricato con ${jsonData.length} righe.`);
+          if (discentiData.length === 0) {
+            showError("Nessun discente trovato. Controlla che il file Excel sia formattato con i discenti in colonne (Matricola, Grado, Cognome/Nome nelle prime 3 righe).");
+            setDiscenti([]);
+          } else {
+            setDiscenti(discentiData);
+            showSuccess(`File Excel "${file.name}" caricato con ${discentiData.length} discenti.`);
+          }
         } catch (error) {
           console.error("Errore nella lettura del file Excel:", error);
           showError("Formato file Excel non valido o corrotto.");
+          setDiscenti([]);
         }
       };
       reader.readAsArrayBuffer(file);
@@ -121,7 +136,7 @@ const Dashboard = () => {
         if (error.properties && Array.isArray(error.properties.errors)) {
           const firstError = error.properties.errors[0];
           if (firstError.id === 'scope_error') {
-            showError(`Errore nel template: il segnaposto {${firstError.properties.tag}} non ha dati corrispondenti. Controlla i nomi delle colonne in Excel e i segnaposto nel Word.`);
+            showError(`Errore nel template: il segnaposto {${firstError.properties.tag}} non ha dati corrispondenti. Controlla i segnaposto nel Word.`);
           } else {
             showError(`Errore nel template Word: ${firstError.message}. Controlla il segnaposto '${firstError.properties.tag}'.`);
           }
@@ -142,35 +157,93 @@ const Dashboard = () => {
         </p>
       </header>
 
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="lg:col-span-3">
+      <div className="grid gap-8 md:grid-cols-3">
+        <Card className="md:col-span-3">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><FileUp size={20} /> Caricamento File</CardTitle>
+            <CardTitle className="flex items-center gap-2"><FileUp size={20} /> 1. Caricamento File</CardTitle>
           </CardHeader>
           <CardContent className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="excel-file">1. Carica File Excel (.xlsx)</Label>
+              <Label htmlFor="excel-file">Carica File Excel (.xlsx)</Label>
               <Input id="excel-file" type="file" accept=".xlsx" onChange={handleExcelUpload} />
               {excelFile && <p className="text-sm text-muted-foreground">Caricato: {excelFile.name}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="word-file">2. Carica Template Word (.docx)</Label>
+              <Label htmlFor="word-file">Carica Template Word (.docx)</Label>
               <Input id="word-file" type="file" accept=".docx" onChange={handleWordUpload} />
               {wordFile && <p className="text-sm text-muted-foreground">Caricato: {wordFile.name}</p>}
             </div>
           </CardContent>
         </Card>
 
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><FileText size={20} /> 2. Dettagli del Corso</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="course-name">Nome del Corso</Label>
+              <Input id="course-name" type="text" placeholder="Es. 123° Corso di Specializzazione..." value={courseName} onChange={(e) => setCourseName(e.target.value)} />
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Data Inizio</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant={"outline"} className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, "PPP", { locale: it }) : <span>Seleziona una data</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <Label>Data Fine</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant={"outline"} className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, "PPP", { locale: it }) : <span>Seleziona una data</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><FileText size={20} /> 3. Firmatario</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup value={signer} onValueChange={setSigner} className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="Il Direttore del Corso" id="r1" />
+                <Label htmlFor="r1">Il Direttore del Corso</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="Il Comandante del Centro" id="r2" />
+                <Label htmlFor="r2">Il Comandante del Centro</Label>
+              </div>
+            </RadioGroup>
+            <p className="text-sm text-muted-foreground mt-4">La firma sarà: Col. Massimiliano Fortino</p>
+          </CardContent>
+        </Card>
+
         {discenti.length > 0 && (
-          <Card className="lg:col-span-3">
+          <Card className="md:col-span-3">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Eye size={20} /> Anteprima Dati da Excel</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 mb-4">
-                <p><strong>Nome Corso Estratto:</strong> <span className="font-mono p-1 bg-muted rounded-md">{courseName || "Non trovato"}</span></p>
-                <p><strong>Numero di Discenti:</strong> <span className="font-mono p-1 bg-muted rounded-md">{discenti.length}</span></p>
-              </div>
+              <p className="mb-4"><strong>Numero di Discenti:</strong> <span className="font-mono p-1 bg-muted rounded-md">{discenti.length}</span></p>
               <div className="max-h-60 overflow-y-auto rounded-md border">
                 <Table>
                   <TableHeader>
@@ -192,68 +265,13 @@ const Dashboard = () => {
                 </Table>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Controlla che i dati qui sopra corrispondano al tuo file Excel. Le intestazioni di colonna devono essere esattamente "Matricola", "Grado militare", e "Cognome e Nome del Discente".
+                Controlla che i dati corrispondano. L'app si aspetta che ogni colonna del file Excel contenga un discente, con Matricola (riga 1), Grado (riga 2) e Cognome/Nome (riga 3).
               </p>
             </CardContent>
           </Card>
         )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><CalendarIcon size={20} /> Periodo del Corso</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Data Inizio</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant={"outline"} className="w-full justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP", { locale: it }) : <span>Seleziona una data</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-2">
-              <Label>Data Fine</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant={"outline"} className="w-full justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP", { locale: it }) : <span>Seleziona una data</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><FileText size={20} /> Firmatario</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RadioGroup value={signer} onValueChange={setSigner}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Il Direttore del Corso" id="r1" />
-                <Label htmlFor="r1">Il Direttore del Corso</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Il Comandante del Centro" id="r2" />
-                <Label htmlFor="r2">Il Comandante del Centro</Label>
-              </div>
-            </RadioGroup>
-            <p className="text-sm text-muted-foreground mt-4">La firma sarà: Col. Massimiliano Fortino</p>
-          </CardContent>
-        </Card>
-
-        <div className="lg:col-span-3 flex justify-center">
+        <div className="md:col-span-3 flex justify-center">
           <Button size="lg" onClick={handleGenerateDocument} className="w-full md:w-1/2 lg:w-1/3">
             <Download className="mr-2 h-5 w-5" />
             Genera Documento
