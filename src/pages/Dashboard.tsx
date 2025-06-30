@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, FileUp, FileText, Download } from "lucide-react";
+import { Calendar as CalendarIcon, FileUp, FileText, Download, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
@@ -20,6 +21,7 @@ interface Discente {
   Matricola: string;
   "Grado militare": string;
   "Cognome e Nome del Discente": string;
+  [key: string]: any; // Permette altre colonne nel file Excel
 }
 
 const Dashboard = () => {
@@ -43,21 +45,19 @@ const Dashboard = () => {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           
-          // Estrae il nome del corso dalla cella A1
           const courseNameCell = worksheet["A1"]?.v;
           if (typeof courseNameCell === 'string') {
             setCourseName(courseNameCell);
           } else {
-            showError("Nome del corso non trovato nella cella A1.");
+            showError("Nome del corso non trovato nella cella A1 del file Excel.");
           }
 
-          // Converte il resto del foglio in JSON, partendo dalla seconda riga
           const jsonData = XLSX.utils.sheet_to_json<Discente>(worksheet, { range: 1 });
           setDiscenti(jsonData);
           showSuccess(`File Excel "${file.name}" caricato con ${jsonData.length} righe.`);
         } catch (error) {
           console.error("Errore nella lettura del file Excel:", error);
-          showError("Formato file Excel non valido.");
+          showError("Formato file Excel non valido o corrotto.");
         }
       };
       reader.readAsArrayBuffer(file);
@@ -117,7 +117,17 @@ const Dashboard = () => {
       } catch (error: any) {
         dismissToast(toastId);
         console.error("Errore nella generazione del documento:", error);
-        showError(`Errore: ${error.message}`);
+        
+        if (error.properties && Array.isArray(error.properties.errors)) {
+          const firstError = error.properties.errors[0];
+          if (firstError.id === 'scope_error') {
+            showError(`Errore nel template: il segnaposto {${firstError.properties.tag}} non ha dati corrispondenti. Controlla i nomi delle colonne in Excel e i segnaposto nel Word.`);
+          } else {
+            showError(`Errore nel template Word: ${firstError.message}. Controlla il segnaposto '${firstError.properties.tag}'.`);
+          }
+        } else {
+          showError(`Errore durante la generazione: ${error.message}`);
+        }
       }
     };
     reader.readAsArrayBuffer(wordFile);
@@ -150,6 +160,43 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+
+        {discenti.length > 0 && (
+          <Card className="lg:col-span-3">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Eye size={20} /> Anteprima Dati da Excel</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 mb-4">
+                <p><strong>Nome Corso Estratto:</strong> <span className="font-mono p-1 bg-muted rounded-md">{courseName || "Non trovato"}</span></p>
+                <p><strong>Numero di Discenti:</strong> <span className="font-mono p-1 bg-muted rounded-md">{discenti.length}</span></p>
+              </div>
+              <div className="max-h-60 overflow-y-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Matricola</TableHead>
+                      <TableHead>Grado militare</TableHead>
+                      <TableHead>Cognome e Nome del Discente</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {discenti.map((d, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{d.Matricola}</TableCell>
+                        <TableCell>{d["Grado militare"]}</TableCell>
+                        <TableCell>{d["Cognome e Nome del Discente"]}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Controlla che i dati qui sopra corrispondano al tuo file Excel. Le intestazioni di colonna devono essere esattamente "Matricola", "Grado militare", e "Cognome e Nome del Discente".
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
