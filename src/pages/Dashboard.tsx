@@ -44,7 +44,7 @@ const Dashboard = () => {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           
-          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { range: 6 });
 
           const discentiData = jsonData.map(row => {
             const matricola = row.matricola || row.Matricola || row['{matricola}'];
@@ -65,7 +65,7 @@ const Dashboard = () => {
           }).filter(d => d !== null) as Discente[];
 
           if (discentiData.length === 0) {
-            showError("Nessun discente trovato. Controlla che il file Excel abbia le colonne con intestazioni: matricola, grado, cognome, nome.");
+            showError("Nessun discente trovato. Controlla che il file Excel abbia le colonne con intestazioni: matricola, grado, cognome, nome a partire dalla riga 7.");
             setDiscenti([]);
           } else {
             setDiscenti(discentiData);
