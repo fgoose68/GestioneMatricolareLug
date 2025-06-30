@@ -216,11 +216,11 @@ const Dashboard = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="course-name">Nome del Corso (da Excel)</Label>
-                <Input id="course-name" type="text" value={courseName} readOnly placeholder="Da Excel (cella B5)" />
+                <Input id="course-name" type="text" value={courseName} readOnly placeholder="Da Excel (riga 5)" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="location">Località (da Excel)</Label>
-                <Input id="location" type="text" value={location} readOnly placeholder="Da Excel (cella B6)" />
+                <Input id="location" type="text" value={location} readOnly placeholder="Da Excel (riga 6)" />
               </div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
