@@ -46,37 +46,24 @@ const Dashboard = () => {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
 
-          let foundTitolocorso = "";
-          let foundLocalita = "";
+          const titolocorsoCell = worksheet['B5'];
+          const localitaCell = worksheet['B6'];
 
-          for (const cellAddress in worksheet) {
-            if (cellAddress[0] === '!') continue;
-
-            const cell = worksheet[cellAddress];
-            const cellValue = cell && cell.v ? String(cell.v).trim().toLowerCase() : "";
-
-            if (cellValue === "titolocorso" || cellValue === "località") {
-              const decodedCell = XLSX.utils.decode_cell(cellAddress);
-              const valueCellAddress = XLSX.utils.encode_cell({ r: decodedCell.r, c: decodedCell.c + 1 });
-              const valueCell = worksheet[valueCellAddress];
-              if (valueCell && valueCell.v) {
-                const value = String(valueCell.v);
-                if (cellValue === "titolocorso") {
-                  foundTitolocorso = value;
-                } else {
-                  foundLocalita = value;
-                }
-              }
-            }
-          }
+          const foundTitolocorso = titolocorsoCell ? String(titolocorsoCell.v) : "";
+          const foundLocalita = localitaCell ? String(localitaCell.v) : "";
 
           if (foundTitolocorso) {
             setCourseName(foundTitolocorso);
             showSuccess(`Nome del corso "${foundTitolocorso}" importato da Excel.`);
+          } else {
+            showError("Titolo del corso non trovato nella cella B5 del file Excel.");
           }
+
           if (foundLocalita) {
             setLocalita(foundLocalita);
             showSuccess(`Località "${foundLocalita}" importata da Excel.`);
+          } else {
+            showError("Località non trovata nella cella B6 del file Excel.");
           }
           
           const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { range: 7 });
