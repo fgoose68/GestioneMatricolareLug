@@ -22,13 +22,15 @@ interface Discente {
   Matricola: string;
   "Grado militare": string;
   "Cognome e Nome del Discente": string;
+  Categoria: string;
+  Titolocorso: string;
 }
 
 const Dashboard = () => {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [wordFile, setWordFile] = useState<File | null>(null);
   const [discenti, setDiscenti] = useState<Discente[]>([]);
-  const [courseName, setCourseName] = useState<string>("");
+  const [location, setLocation] = useState<string>("");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [signer, setSigner] = useState<string>("Il Direttore del Corso");
@@ -45,16 +47,44 @@ const Dashboard = () => {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           
-          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { range: 6 });
+          const findValueByLabel = (ws: XLSX.WorkSheet, label: string): string => {
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for (let R = range.s.r; R <= range.e.r; ++R) {
+              for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cell_address = {c:C, r:R};
+                const cell_ref = XLSX.utils.encode_cell(cell_address);
+                const cell = ws[cell_ref];
+                if (cell && cell.v && String(cell.v).trim().toLowerCase() === label.toLowerCase()) {
+                  const value_cell_address = {c:C + 1, r:R};
+                  const value_cell_ref = XLSX.utils.encode_cell(value_cell_address);
+                  const value_cell = ws[value_cell_ref];
+                  if (value_cell && value_cell.v) {
+                    return String(value_cell.v);
+                  }
+                }
+              }
+            }
+            return "";
+          };
+
+          const locationValue = findValueByLabel(worksheet, "Localita");
+          setLocation(locationValue);
+           if (!locationValue) {
+            showError("Attenzione: Etichetta 'Localita' non trovata o valore adiacente mancante nel file Excel.");
+          }
+
+          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { range: 7 });
 
           const discentiData = jsonData.map(row => {
             const matricola = row.matricola || row.Matricola || row['{matricola}'];
             const grado = row.grado || row.Grado || row['{grado}'];
             const cognome = row.cognome || row.Cognome || row['{cognome}'];
             const nome = row.nome || row.Nome || row['{nome}'];
+            const categoria = row.categoria || row.Categoria || row['{categoria}'];
+            const titolocorso = row.titolocorso || row.Titolocorso || row['{titolocorso}'];
 
-            if (!matricola || !grado || !cognome || !nome) {
-              console.warn("Riga saltata per dati mancanti:", row);
+            if (!matricola || !grado || !cognome || !nome || !categoria || !titolocorso) {
+              console.warn("Riga saltata per dati mancanti (matricola, grado, cognome, nome, categoria, titolocorso):", row);
               return null;
             }
 
@@ -62,20 +92,23 @@ const Dashboard = () => {
               "Matricola": String(matricola),
               "Grado militare": String(grado),
               "Cognome e Nome del Discente": `${cognome} ${nome}`,
+              "Categoria": String(categoria),
+              "Titolocorso": String(titolocorso),
             };
           }).filter(d => d !== null) as Discente[];
 
           if (discentiData.length === 0) {
-            showError("Nessun discente trovato. Controlla che il file Excel abbia le colonne con intestazioni: matricola, grado, cognome, nome a partire dalla riga 7.");
+            showError("Nessun discente trovato. Controlla che il file Excel abbia le intestazioni corrette (es. matricola, grado, categoria, titolocorso) alla riga 8.");
             setDiscenti([]);
           } else {
             setDiscenti(discentiData);
-            showSuccess(`File Excel "${file.name}" caricato con ${discentiData.length} discenti.`);
+            showSuccess(`File Excel "${file.name}" caricato. Trovati ${discentiData.length} discenti.`);
           }
         } catch (error) {
           console.error("Errore nella lettura del file Excel:", error);
           showError("Formato file Excel non valido o corrotto.");
           setDiscenti([]);
+          setLocation("");
         }
       };
       reader.readAsArrayBuffer(file);
@@ -91,8 +124,8 @@ const Dashboard = () => {
   };
 
   const handleGenerateDocument = () => {
-    if (!wordFile || discenti.length === 0 || !startDate || !endDate || !courseName) {
-      showError("Per favore, carica entrambi i file e compila tutti i campi.");
+    if (!wordFile || discenti.length === 0 || !startDate || !endDate || !location) {
+      showError("Per favore, carica entrambi i file, assicurati che contengano i dati necessari (località, discenti) e compila le date.");
       return;
     }
 
@@ -115,7 +148,9 @@ const Dashboard = () => {
           });
 
           doc.setData({
-            corso: courseName,
+            titolocorso: discente.Titolocorso,
+            categoria: discente.Categoria,
+            localita: location,
             periodo_corso: `dal ${formattedStartDate} al ${formattedEndDate}`,
             firmatario: `${signer}\nCol. Massimiliano Fortino`,
             grado: discente["Grado militare"],
@@ -184,8 +219,7 @@ const Dashboard = () => {
               <Input id="word-file" type="file" accept=".docx" onChange={handleWordUpload} />
               {wordFile && <p className="text-sm text-muted-foreground">Caricato: {wordFile.name}</p>}
                <p className="text-xs text-muted-foreground pt-2">
-                Il template deve contenere i segnaposto singoli come {`{corso}`}, {`{grado}`}, {`{cognome_nome}`}, e {`{matricola}`}. 
-                Non usare il ciclo {`{#discenti}`}. Verrà generato un file ZIP con un documento per ogni discente.
+                Il template deve contenere i segnaposto come {`{titolocorso}`}, {`{categoria}`}, {`{localita}`}, {`{grado}`}, ecc.
               </p>
             </div>
           </CardContent>
@@ -196,9 +230,11 @@ const Dashboard = () => {
             <CardTitle className="flex items-center gap-2"><FileText size={20} /> 2. Dettagli del Corso</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="course-name">Nome del Corso</Label>
-              <Input id="course-name" type="text" placeholder="Es. 123° Corso di Specializzazione..." value={courseName} onChange={(e) => setCourseName(e.target.value)} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="location">Località (da Excel)</Label>
+                <Input id="location" type="text" value={location} readOnly placeholder="Letto da Excel" />
+              </div>
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -265,7 +301,9 @@ const Dashboard = () => {
                     <TableRow>
                       <TableHead>Matricola</TableHead>
                       <TableHead>Grado militare</TableHead>
-                      <TableHead>Cognome e Nome del Discente</TableHead>
+                      <TableHead>Cognome e Nome</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Titolo Corso</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -274,13 +312,15 @@ const Dashboard = () => {
                         <TableCell>{d.Matricola}</TableCell>
                         <TableCell>{d["Grado militare"]}</TableCell>
                         <TableCell>{d["Cognome e Nome del Discente"]}</TableCell>
+                        <TableCell>{d.Categoria}</TableCell>
+                        <TableCell>{d.Titolocorso}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Controlla che i dati corrispondano. L'app si aspetta che il file Excel contenga le colonne con intestazioni: matricola, grado, cognome, nome.
+                Controlla che i dati corrispondano. L'app si aspetta che il file Excel contenga le colonne con intestazioni: matricola, grado, cognome, nome, categoria, titolocorso.
               </p>
             </CardContent>
           </Card>
