@@ -29,7 +29,6 @@ const Dashboard = () => {
   const [wordFile, setWordFile] = useState<File | null>(null);
   const [discenti, setDiscenti] = useState<Discente[]>([]);
   const [courseName, setCourseName] = useState<string>("");
-  const [location, setLocation] = useState<string>("");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [signer, setSigner] = useState<string>("Il Direttore del Corso");
@@ -46,21 +45,7 @@ const Dashboard = () => {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           
-          const courseNameCell = worksheet['B5'];
-          const courseNameValue = courseNameCell ? String(courseNameCell.v) : "";
-          setCourseName(courseNameValue);
-          if (!courseNameValue) {
-            showError("Attenzione: Nome del corso (cella B5) non trovato nel file Excel.");
-          }
-
-          const locationCell = worksheet['B6'];
-          const locationValue = locationCell ? String(locationCell.v) : "";
-          setLocation(locationValue);
-           if (!locationValue) {
-            showError("Attenzione: Località (cella B6) non trovata nel file Excel.");
-          }
-
-          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { range: 7 });
+          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { range: 6 });
 
           const discentiData = jsonData.map(row => {
             const matricola = row.matricola || row.Matricola || row['{matricola}'];
@@ -81,18 +66,16 @@ const Dashboard = () => {
           }).filter(d => d !== null) as Discente[];
 
           if (discentiData.length === 0) {
-            showError("Nessun discente trovato. Controlla che il file Excel abbia le intestazioni corrette alla riga 7 e i dati a partire dalla riga 8.");
+            showError("Nessun discente trovato. Controlla che il file Excel abbia le colonne con intestazioni: matricola, grado, cognome, nome a partire dalla riga 7.");
             setDiscenti([]);
           } else {
             setDiscenti(discentiData);
-            showSuccess(`File Excel "${file.name}" caricato. Trovati ${discentiData.length} discenti, nome corso e località.`);
+            showSuccess(`File Excel "${file.name}" caricato con ${discentiData.length} discenti.`);
           }
         } catch (error) {
           console.error("Errore nella lettura del file Excel:", error);
           showError("Formato file Excel non valido o corrotto.");
           setDiscenti([]);
-          setCourseName("");
-          setLocation("");
         }
       };
       reader.readAsArrayBuffer(file);
@@ -108,8 +91,8 @@ const Dashboard = () => {
   };
 
   const handleGenerateDocument = () => {
-    if (!wordFile || discenti.length === 0 || !startDate || !endDate || !courseName || !location) {
-      showError("Per favore, carica entrambi i file, assicurati che contengano i dati necessari (corso, località, discenti) e compila le date.");
+    if (!wordFile || discenti.length === 0 || !startDate || !endDate || !courseName) {
+      showError("Per favore, carica entrambi i file e compila tutti i campi.");
       return;
     }
 
@@ -132,8 +115,7 @@ const Dashboard = () => {
           });
 
           doc.setData({
-            titolocorso: courseName,
-            localita: location,
+            corso: courseName,
             periodo_corso: `dal ${formattedStartDate} al ${formattedEndDate}`,
             firmatario: `${signer}\nCol. Massimiliano Fortino`,
             grado: discente["Grado militare"],
@@ -202,7 +184,8 @@ const Dashboard = () => {
               <Input id="word-file" type="file" accept=".docx" onChange={handleWordUpload} />
               {wordFile && <p className="text-sm text-muted-foreground">Caricato: {wordFile.name}</p>}
                <p className="text-xs text-muted-foreground pt-2">
-                Il template deve contenere i segnaposto come {`{titolocorso}`}, {`{localita}`}, {`{grado}`}, {`{cognome_nome}`}, e {`{matricola}`}.
+                Il template deve contenere i segnaposto singoli come {`{corso}`}, {`{grado}`}, {`{cognome_nome}`}, e {`{matricola}`}. 
+                Non usare il ciclo {`{#discenti}`}. Verrà generato un file ZIP con un documento per ogni discente.
               </p>
             </div>
           </CardContent>
@@ -213,15 +196,9 @@ const Dashboard = () => {
             <CardTitle className="flex items-center gap-2"><FileText size={20} /> 2. Dettagli del Corso</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="course-name">Nome del Corso (da Excel)</Label>
-                <Input id="course-name" type="text" value={courseName} readOnly placeholder="Da Excel (riga 5)" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Località (da Excel)</Label>
-                <Input id="location" type="text" value={location} readOnly placeholder="Da Excel (riga 6)" />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="course-name">Nome del Corso</Label>
+              <Input id="course-name" type="text" placeholder="Es. 123° Corso di Specializzazione..." value={courseName} onChange={(e) => setCourseName(e.target.value)} />
             </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -303,7 +280,7 @@ const Dashboard = () => {
                 </Table>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Controlla che i dati corrispondano. L'app si aspetta che il file Excel contenga le intestazioni corrette alla riga 7 e i dati a partire dalla riga 8.
+                Controlla che i dati corrispondano. L'app si aspetta che il file Excel contenga le colonne con intestazioni: matricola, grado, cognome, nome.
               </p>
             </CardContent>
           </Card>
