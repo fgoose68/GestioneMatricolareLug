@@ -24,13 +24,13 @@ interface Discente {
   "Cognome e Nome del Discente": string;
   Categoria: string;
   Titolocorso: string;
+  Localita: string;
 }
 
 const Dashboard = () => {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [wordFile, setWordFile] = useState<File | null>(null);
   const [discenti, setDiscenti] = useState<Discente[]>([]);
-  const [location, setLocation] = useState<string>("");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [signer, setSigner] = useState<string>("Il Direttore del Corso");
@@ -47,32 +47,6 @@ const Dashboard = () => {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           
-          const findValueByLabel = (ws: XLSX.WorkSheet, label: string): string => {
-            const range = XLSX.utils.decode_range(ws['!ref']);
-            for (let R = range.s.r; R <= range.e.r; ++R) {
-              for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cell_address = {c:C, r:R};
-                const cell_ref = XLSX.utils.encode_cell(cell_address);
-                const cell = ws[cell_ref];
-                if (cell && cell.v && String(cell.v).trim().toLowerCase() === label.toLowerCase()) {
-                  const value_cell_address = {c:C + 1, r:R};
-                  const value_cell_ref = XLSX.utils.encode_cell(value_cell_address);
-                  const value_cell = ws[value_cell_ref];
-                  if (value_cell && value_cell.v) {
-                    return String(value_cell.v);
-                  }
-                }
-              }
-            }
-            return "";
-          };
-
-          const locationValue = findValueByLabel(worksheet, "Localita");
-          setLocation(locationValue);
-           if (!locationValue) {
-            showError("Attenzione: Etichetta 'Localita' non trovata o valore adiacente mancante nel file Excel.");
-          }
-
           // I dati dei discenti partono da A2, quindi le intestazioni sono alla riga 1 (indice 0).
           const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { range: 0 });
 
@@ -83,9 +57,10 @@ const Dashboard = () => {
             const nome = row.nome || row.Nome || row['{nome}'];
             const categoria = row.categoria || row.Categoria || row['{categoria}'];
             const titolocorso = row.titolocorso || row.Titolocorso || row['{titolocorso}'];
+            const localita = row.localita || row.Localita || row['{localita}'];
 
-            if (!matricola || !grado || !cognome || !nome || !categoria || !titolocorso) {
-              console.warn("Riga saltata per dati mancanti (matricola, grado, cognome, nome, categoria, titolocorso):", row);
+            if (!matricola || !grado || !cognome || !nome || !categoria || !titolocorso || !localita) {
+              console.warn("Riga saltata per dati mancanti (es. matricola, grado, cognome, nome, categoria, titolocorso, localita):", row);
               return null;
             }
 
@@ -95,6 +70,7 @@ const Dashboard = () => {
               "Cognome e Nome del Discente": `${cognome} ${nome}`,
               "Categoria": String(categoria),
               "Titolocorso": String(titolocorso),
+              "Localita": String(localita),
             };
           }).filter(d => d !== null) as Discente[];
 
@@ -109,7 +85,6 @@ const Dashboard = () => {
           console.error("Errore nella lettura del file Excel:", error);
           showError("Formato file Excel non valido o corrotto.");
           setDiscenti([]);
-          setLocation("");
         }
       };
       reader.readAsArrayBuffer(file);
@@ -125,8 +100,8 @@ const Dashboard = () => {
   };
 
   const handleGenerateDocument = () => {
-    if (!wordFile || discenti.length === 0 || !startDate || !endDate || !location) {
-      showError("Per favore, carica entrambi i file, assicurati che contengano i dati necessari (località, discenti) e compila le date.");
+    if (!wordFile || discenti.length === 0 || !startDate || !endDate) {
+      showError("Per favore, carica entrambi i file, assicurati che l'Excel contenga i dati dei discenti e compila le date del corso.");
       return;
     }
 
@@ -151,7 +126,7 @@ const Dashboard = () => {
           doc.setData({
             titolocorso: discente.Titolocorso,
             categoria: discente.Categoria,
-            localita: location,
+            localita: discente.Localita,
             periodo_corso: `dal ${formattedStartDate} al ${formattedEndDate}`,
             firmatario: `${signer}\nCol. Massimiliano Fortino`,
             grado: discente["Grado militare"],
@@ -231,12 +206,6 @@ const Dashboard = () => {
             <CardTitle className="flex items-center gap-2"><FileText size={20} /> 2. Dettagli del Corso</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="location">Località (da Excel)</Label>
-                <Input id="location" type="text" value={location} readOnly placeholder="Letto da Excel" />
-              </div>
-            </div>
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Data Inizio</Label>
@@ -305,6 +274,7 @@ const Dashboard = () => {
                       <TableHead>Cognome e Nome</TableHead>
                       <TableHead>Categoria</TableHead>
                       <TableHead>Titolo Corso</TableHead>
+                      <TableHead>Località</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -315,6 +285,7 @@ const Dashboard = () => {
                         <TableCell>{d["Cognome e Nome del Discente"]}</TableCell>
                         <TableCell>{d.Categoria}</TableCell>
                         <TableCell>{d.Titolocorso}</TableCell>
+                        <TableCell>{d.Localita}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
