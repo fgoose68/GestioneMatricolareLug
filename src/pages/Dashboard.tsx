@@ -55,18 +55,29 @@ function Dashboard() {
         }
 
         const discentiData = jsonData.map((row, index) => {
-          const matricola = row.matricola || row.Matricola;
-          const grado = row.grado || row.Grado;
-          const cognome = row.cognome || row.Cognome;
-          const nome = row.nome || row.Nome;
-          const categoria = row.cat || row.Cat || row.categoria || row.Categoria;
-          const titolocorso = row.corso || row.Corso || row.titolocorso || row.Titolocorso;
-          const localita = row.sede || row.Sede || row.localita || row.Localita;
-          const dal = row.dal || row.Dal;
-          const al = row.al || row.Al;
+          // Rende la lettura delle intestazioni flessibile:
+          // 1. Converte tutte le chiavi (nomi delle colonne) in minuscolo.
+          // 2. Rimuove spazi bianchi all'inizio e alla fine.
+          const normalizedRow: { [key: string]: any } = {};
+          for (const key in row) {
+            if (Object.prototype.hasOwnProperty.call(row, key)) {
+              normalizedRow[key.toLowerCase().trim()] = row[key];
+            }
+          }
+
+          // Cerca i dati nella riga "normalizzata", usando anche alias comuni.
+          const matricola = normalizedRow.matricola;
+          const grado = normalizedRow.grado;
+          const cognome = normalizedRow.cognome;
+          const nome = normalizedRow.nome;
+          const categoria = normalizedRow.cat || normalizedRow.categoria;
+          const titolocorso = normalizedRow.corso || normalizedRow.titolocorso;
+          const localita = normalizedRow.sede || normalizedRow.localita;
+          const dal = normalizedRow.dal;
+          const al = normalizedRow.al;
 
           if (!matricola || !grado || !cognome || !nome || !categoria || !titolocorso || !localita || !dal || !al) {
-            console.warn(`Riga ${index + 2} del file Excel saltata perché mancano uno o più dati richiesti. Dati letti:`, row);
+            console.warn(`Riga ${index + 2} del file Excel saltata perché mancano uno o più dati richiesti. Dati letti:`, row, 'Dati normalizzati:', normalizedRow);
             return null;
           }
 
