@@ -46,10 +46,6 @@ const Dashboard = () => {
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         
-        // Questa funzione `sheet_to_json` è lo standard per leggere file Excel:
-        // 1. USA LA PRIMA RIGA come intestazioni di colonna.
-        // 2. LEGGE I DATI a partire dalla SECONDA RIGA.
-        // Questo corrisponde esattamente alla struttura del tuo file.
         const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
         if (jsonData.length === 0) {
@@ -59,7 +55,6 @@ const Dashboard = () => {
         }
 
         const discentiData = jsonData.map((row, index) => {
-          // Nomi delle colonne flessibili (maiuscole/minuscole) per una maggiore compatibilità
           const matricola = row.matricola || row.Matricola;
           const grado = row.grado || row.Grado;
           const cognome = row.cognome || row.Cognome;
@@ -70,7 +65,6 @@ const Dashboard = () => {
           const dal = row.dal || row.Dal;
           const al = row.al || row.Al;
 
-          // Controllo di validità per ogni riga
           if (!matricola || !grado || !cognome || !nome || !categoria || !titolocorso || !localita || !dal || !al) {
             console.warn(`Riga ${index + 2} del file Excel saltata perché mancano uno o più dati richiesti. Dati letti:`, row);
             return null;
@@ -217,7 +211,7 @@ const Dashboard = () => {
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><FileText size={20} /> 2. Firmatario</CardTitle>
-          </Header>
+          </CardHeader>
           <CardContent>
             <RadioGroup value={signer} onValueChange={setSigner} className="space-y-2">
               <div className="flex items-center space-x-2">
