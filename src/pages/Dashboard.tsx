@@ -44,7 +44,9 @@ const Dashboard = () => {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           
-          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { range: 0 });
+          // Converte il foglio in JSON. Di default, usa la prima riga come intestazione
+          // e legge i dati dalle righe successive (dalla seconda in poi).
+          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
           const discentiData = jsonData.map(row => {
             const matricola = row.matricola || row.Matricola;
@@ -75,7 +77,7 @@ const Dashboard = () => {
           }).filter(d => d !== null) as Discente[];
 
           if (discentiData.length === 0) {
-            showError("Nessun discente trovato. Controlla che il file Excel abbia le intestazioni nella riga 1 e i dati a partire dalla riga 2.");
+            showError("Nessun discente valido trovato. Controlla che il file Excel abbia le intestazioni corrette nella prima riga e che i dati inizino dalla seconda riga.");
             setDiscenti([]);
           } else {
             setDiscenti(discentiData);
