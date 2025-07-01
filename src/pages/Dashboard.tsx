@@ -4,11 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, FileUp, FileText, Download, Eye } from "lucide-react";
+import { FileUp, FileText, Download, Eye } from "lucide-react";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -25,14 +22,14 @@ interface Discente {
   Categoria: string;
   Titolocorso: string;
   Localita: string;
+  DataInizio: string;
+  DataFine: string;
 }
 
 const Dashboard = () => {
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [wordFile, setWordFile] = useState<File | null>(null);
   const [discenti, setDiscenti] = useState<Discente[]>([]);
-  const [startDate, setStartDate] = useState<Date | undefined>();
-  const [endDate, setEndDate] = useState<Date | undefined>();
   const [signer, setSigner] = useState<string>("Il Direttore del Corso");
 
   const handleExcelUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,24 +40,25 @@ const Dashboard = () => {
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array" });
+          const workbook = XLSX.read(data, { type: "array", cellDates: true });
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           
-          // I dati dei discenti partono da A2, quindi le intestazioni sono alla riga 1 (indice 0).
           const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { range: 0 });
 
           const discentiData = jsonData.map(row => {
-            const matricola = row.matricola || row.Matricola || row['{matricola}'];
-            const grado = row.grado || row.Grado || row['{grado}'];
-            const cognome = row.cognome || row.Cognome || row['{cognome}'];
-            const nome = row.nome || row.Nome || row['{nome}'];
-            const categoria = row.categoria || row.Categoria || row['{categoria}'];
-            const titolocorso = row.titolocorso || row.Titolocorso || row['{titolocorso}'];
-            const localita = row.localita || row.Localita || row['{localita}'];
+            const matricola = row.matricola || row.Matricola;
+            const grado = row.grado || row.Grado;
+            const cognome = row.cognome || row.Cognome;
+            const nome = row.nome || row.Nome;
+            const categoria = row.cat || row.Cat || row.categoria || row.Categoria;
+            const titolocorso = row.corso || row.Corso || row.titolocorso || row.Titolocorso;
+            const localita = row.sede || row.Sede || row.localita || row.Localita;
+            const dal = row.dal || row.Dal;
+            const al = row.al || row.Al;
 
-            if (!matricola || !grado || !cognome || !nome || !categoria || !titolocorso || !localita) {
-              console.warn("Riga saltata per dati mancanti (es. matricola, grado, cognome, nome, categoria, titolocorso, localita):", row);
+            if (!matricola || !grado || !cognome || !nome || !categoria || !titolocorso || !localita || !dal || !al) {
+              console.warn("Riga saltata per dati mancanti. Campi richiesti: matricola, grado, cognome, nome, cat, sede, dal, al, corso.", row);
               return null;
             }
 
@@ -71,6 +69,8 @@ const Dashboard = () => {
               "Categoria": String(categoria),
               "Titolocorso": String(titolocorso),
               "Localita": String(localita),
+              "DataInizio": dal instanceof Date ? format(dal, "dd/MM/yyyy") : String(dal),
+              "DataFine": al instanceof Date ? format(al, "dd/MM/yyyy") : String(al),
             };
           }).filter(d => d !== null) as Discente[];
 
@@ -100,12 +100,12 @@ const Dashboard = () => {
   };
 
   const handleGenerateDocument = () => {
-    if (!wordFile || discenti.length === 0 || !startDate || !endDate) {
-      showError("Per favore, carica entrambi i file, assicurati che l'Excel contenga i dati dei discenti e compila le date del corso.");
+    if (!wordFile || discenti.length === 0) {
+      showError("Per favore, carica il file Excel con i dati e il template Word.");
       return;
     }
 
-    const toastId = showLoading("Generazione dei documenti individuali in corso...");
+    const toastId = showLoading("Generazione dei documenti in corso...");
 
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -113,9 +113,6 @@ const Dashboard = () => {
         const content = e.target?.result as ArrayBuffer;
         const outputZip = new JSZip();
         
-        const formattedStartDate = format(startDate, "dd/MM/yyyy");
-        const formattedEndDate = format(endDate, "dd/MM/yyyy");
-
         for (const discente of discenti) {
           const templateZip = new PizZip(content);
           const doc = new Docxtemplater(templateZip, {
@@ -127,7 +124,7 @@ const Dashboard = () => {
             titolocorso: discente.Titolocorso,
             categoria: discente.Categoria,
             localita: discente.Localita,
-            periodo_corso: `dal ${formattedStartDate} al ${formattedEndDate}`,
+            periodo_corso: `dal ${discente.DataInizio} al ${discente.DataFine}`,
             firmatario: `${signer}\nCol. Massimiliano Fortino`,
             grado: discente["Grado militare"],
             cognome_nome: discente["Cognome e Nome del Discente"],
@@ -149,7 +146,7 @@ const Dashboard = () => {
         saveAs(zipBlob, "documenti_individuali.zip");
 
         dismissToast(toastId);
-        showSuccess("Archivio ZIP con documenti individuali generato con successo!");
+        showSuccess("Archivio ZIP con documenti generato con successo!");
 
       } catch (error: any) {
         dismissToast(toastId);
@@ -175,12 +172,12 @@ const Dashboard = () => {
       <header className="text-center mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard Stampa Unione</h1>
         <p className="text-muted-foreground">
-          Carica i file, imposta i dati e genera i documenti personalizzati.
+          Carica i file e genera i documenti personalizzati.
         </p>
       </header>
 
-      <div className="grid gap-8 md:grid-cols-3">
-        <Card className="md:col-span-3">
+      <div className="grid gap-8 md:grid-cols-2">
+        <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><FileUp size={20} /> 1. Caricamento File</CardTitle>
           </CardHeader>
@@ -189,13 +186,16 @@ const Dashboard = () => {
               <Label htmlFor="excel-file">Carica File Excel (.xlsx)</Label>
               <Input id="excel-file" type="file" accept=".xlsx" onChange={handleExcelUpload} />
               {excelFile && <p className="text-sm text-muted-foreground">Caricato: {excelFile.name}</p>}
+              <p className="text-xs text-muted-foreground pt-2">
+                Il file deve avere le intestazioni alla riga 1 (es. matricola, grado, cognome, nome, cat, sede, dal, al, corso).
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="word-file">Carica Template Word (.docx)</Label>
               <Input id="word-file" type="file" accept=".docx" onChange={handleWordUpload} />
               {wordFile && <p className="text-sm text-muted-foreground">Caricato: {wordFile.name}</p>}
                <p className="text-xs text-muted-foreground pt-2">
-                Il template deve contenere i segnaposto come {`{titolocorso}`}, {`{categoria}`}, {`{localita}`}, {`{grado}`}, ecc.
+                Il template deve contenere i segnaposto come {`{corso}`}, {`{categoria}`}, {`{sede}`}, ecc.
               </p>
             </div>
           </CardContent>
@@ -203,45 +203,7 @@ const Dashboard = () => {
 
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><FileText size={20} /> 2. Dettagli del Corso</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Data Inizio</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant={"outline"} className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "PPP", { locale: it }) : <span>Seleziona una data</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-2">
-                <Label>Data Fine</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant={"outline"} className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "PPP", { locale: it }) : <span>Seleziona una data</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><FileText size={20} /> 3. Firmatario</CardTitle>
+            <CardTitle className="flex items-center gap-2"><FileText size={20} /> 2. Firmatario</CardTitle>
           </CardHeader>
           <CardContent>
             <RadioGroup value={signer} onValueChange={setSigner} className="space-y-2">
@@ -259,22 +221,24 @@ const Dashboard = () => {
         </Card>
 
         {discenti.length > 0 && (
-          <Card className="md:col-span-3">
+          <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><Eye size={20} /> Anteprima Dati da Excel</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4"><strong>Numero di Discenti:</strong> <span className="font-mono p-1 bg-muted rounded-md">{discenti.length}</span></p>
-              <div className="max-h-60 overflow-y-auto rounded-md border">
+              <div className="max-h-80 overflow-y-auto rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Matricola</TableHead>
-                      <TableHead>Grado militare</TableHead>
+                      <TableHead>Grado</TableHead>
                       <TableHead>Cognome e Nome</TableHead>
                       <TableHead>Categoria</TableHead>
-                      <TableHead>Titolo Corso</TableHead>
-                      <TableHead>Località</TableHead>
+                      <TableHead>Corso</TableHead>
+                      <TableHead>Sede</TableHead>
+                      <TableHead>Dal</TableHead>
+                      <TableHead>Al</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -286,22 +250,24 @@ const Dashboard = () => {
                         <TableCell>{d.Categoria}</TableCell>
                         <TableCell>{d.Titolocorso}</TableCell>
                         <TableCell>{d.Localita}</TableCell>
+                        <TableCell>{d.DataInizio}</TableCell>
+                        <TableCell>{d.DataFine}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Controlla che i dati corrispondano. L'app si aspetta che il file Excel contenga le intestazioni nella riga 1 e i dati dei discenti a partire dalla riga 2.
+                Controlla che i dati corrispondano.
               </p>
             </CardContent>
           </Card>
         )}
 
-        <div className="md:col-span-3 flex justify-center">
+        <div className="md:col-span-2 flex justify-center">
           <Button size="lg" onClick={handleGenerateDocument} className="w-full md:w-1/2 lg:w-1/3">
             <Download className="mr-2 h-5 w-5" />
-            Genera Documento
+            Genera Documenti
           </Button>
         </div>
       </div>
