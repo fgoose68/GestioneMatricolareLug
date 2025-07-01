@@ -34,63 +34,74 @@ const Dashboard = () => {
 
   const handleExcelUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setExcelFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: "array", cellDates: true });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          
-          // Converte il foglio in JSON. Di default, usa la prima riga come intestazione
-          // e legge i dati dalle righe successive (dalla seconda in poi).
-          const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+    if (!file) return;
 
-          const discentiData = jsonData.map(row => {
-            const matricola = row.matricola || row.Matricola;
-            const grado = row.grado || row.Grado;
-            const cognome = row.cognome || row.Cognome;
-            const nome = row.nome || row.Nome;
-            const categoria = row.cat || row.Cat || row.categoria || row.Categoria;
-            const titolocorso = row.corso || row.Corso || row.titolocorso || row.Titolocorso;
-            const localita = row.sede || row.Sede || row.localita || row.Localita;
-            const dal = row.dal || row.Dal;
-            const al = row.al || row.Al;
+    setExcelFile(file);
+    const reader = new FileReader();
 
-            if (!matricola || !grado || !cognome || !nome || !categoria || !titolocorso || !localita || !dal || !al) {
-              console.warn("Riga saltata per dati mancanti. Campi richiesti: matricola, grado, cognome, nome, cat, sede, dal, al, corso.", row);
-              return null;
-            }
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array", cellDates: true });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        
+        // Questa funzione `sheet_to_json` è lo standard per leggere file Excel:
+        // 1. USA LA PRIMA RIGA come intestazioni di colonna.
+        // 2. LEGGE I DATI a partire dalla SECONDA RIGA.
+        // Questo corrisponde esattamente alla struttura del tuo file.
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-            return {
-              "Matricola": String(matricola),
-              "Grado militare": String(grado),
-              "Cognome e Nome del Discente": `${cognome} ${nome}`,
-              "Categoria": String(categoria),
-              "Titolocorso": String(titolocorso),
-              "Localita": String(localita),
-              "DataInizio": dal instanceof Date ? format(dal, "dd/MM/yyyy") : String(dal),
-              "DataFine": al instanceof Date ? format(al, "dd/MM/yyyy") : String(al),
-            };
-          }).filter(d => d !== null) as Discente[];
-
-          if (discentiData.length === 0) {
-            showError("Nessun discente valido trovato. Controlla che il file Excel abbia le intestazioni corrette nella prima riga e che i dati inizino dalla seconda riga.");
-            setDiscenti([]);
-          } else {
-            setDiscenti(discentiData);
-            showSuccess(`File Excel "${file.name}" caricato. Trovati ${discentiData.length} discenti.`);
-          }
-        } catch (error) {
-          console.error("Errore nella lettura del file Excel:", error);
-          showError("Formato file Excel non valido o corrotto.");
+        if (jsonData.length === 0) {
+          showError("Nessun dato trovato dopo la riga di intestazione. Controlla che il file non sia vuoto dalla seconda riga in poi.");
           setDiscenti([]);
+          return;
         }
-      };
-      reader.readAsArrayBuffer(file);
-    }
+
+        const discentiData = jsonData.map((row, index) => {
+          // Nomi delle colonne flessibili (maiuscole/minuscole) per una maggiore compatibilità
+          const matricola = row.matricola || row.Matricola;
+          const grado = row.grado || row.Grado;
+          const cognome = row.cognome || row.Cognome;
+          const nome = row.nome || row.Nome;
+          const categoria = row.cat || row.Cat || row.categoria || row.Categoria;
+          const titolocorso = row.corso || row.Corso || row.titolocorso || row.Titolocorso;
+          const localita = row.sede || row.Sede || row.localita || row.Localita;
+          const dal = row.dal || row.Dal;
+          const al = row.al || row.Al;
+
+          // Controllo di validità per ogni riga
+          if (!matricola || !grado || !cognome || !nome || !categoria || !titolocorso || !localita || !dal || !al) {
+            console.warn(`Riga ${index + 2} del file Excel saltata perché mancano uno o più dati richiesti. Dati letti:`, row);
+            return null;
+          }
+
+          return {
+            "Matricola": String(matricola),
+            "Grado militare": String(grado),
+            "Cognome e Nome del Discente": `${cognome} ${nome}`,
+            "Categoria": String(categoria),
+            "Titolocorso": String(titolocorso),
+            "Localita": String(localita),
+            "DataInizio": dal instanceof Date ? format(dal, "dd/MM/yyyy") : String(dal),
+            "DataFine": al instanceof Date ? format(al, "dd/MM/yyyy") : String(al),
+          };
+        }).filter(d => d !== null) as Discente[];
+
+        if (discentiData.length === 0) {
+          showError("Nessun discente valido caricato. Controlla che le intestazioni nella riga 1 del file Excel siano corrette (es. 'matricola', 'grado', 'sede', ecc.) e che i dati siano presenti in tutte le colonne a partire dalla riga 2.");
+          setDiscenti([]);
+        } else {
+          setDiscenti(discentiData);
+          showSuccess(`Caricamento completato. Trovati ${discentiData.length} discenti validi.`);
+        }
+      } catch (error) {
+        console.error("Errore imprevisto durante la lettura del file Excel:", error);
+        showError("Errore durante l'elaborazione del file. Assicurati che sia un file .xlsx valido e non corrotto.");
+        setDiscenti([]);
+      }
+    };
+    reader.readAsArrayBuffer(file);
   };
 
   const handleWordUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -206,7 +217,7 @@ const Dashboard = () => {
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><FileText size={20} /> 2. Firmatario</CardTitle>
-          </CardHeader>
+          </Header>
           <CardContent>
             <RadioGroup value={signer} onValueChange={setSigner} className="space-y-2">
               <div className="flex items-center space-x-2">
