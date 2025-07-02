@@ -55,9 +55,6 @@ function Dashboard() {
         }
 
         const discentiData = jsonData.map((row, index) => {
-          // Rende la lettura delle intestazioni flessibile:
-          // 1. Converte tutte le chiavi (nomi delle colonne) in minuscolo.
-          // 2. Rimuove spazi bianchi all'inizio e alla fine.
           const normalizedRow: { [key: string]: any } = {};
           for (const key in row) {
             if (Object.prototype.hasOwnProperty.call(row, key)) {
@@ -65,7 +62,6 @@ function Dashboard() {
             }
           }
 
-          // Cerca i dati nella riga "normalizzata", usando anche alias comuni.
           const matricola = normalizedRow.matricola;
           const grado = normalizedRow.grado;
           const cognome = normalizedRow.cognome;
@@ -234,7 +230,9 @@ function Dashboard() {
                 <Label htmlFor="r2">Il Comandante del Centro</Label>
               </div>
             </RadioGroup>
-            <p className="text-sm text-muted-foreground mt-4">La firma sarà: Col. Massimiliano Fortino</p>
+            <p className="text-sm text-muted-foreground mt-4">
+              Il titolo selezionato apparirà sopra il nome del firmatario: <strong>Col. Massimiliano Fortino</strong>.
+            </p>
           </CardContent>
         </Card>
 
