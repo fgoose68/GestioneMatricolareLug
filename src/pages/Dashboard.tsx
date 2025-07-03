@@ -70,39 +70,52 @@ function Dashboard() {
         const period = `dal ${startDate} al ${endDate}`;
         setCourseInfo({ title, location, period });
 
-        // Estrazione dati discenti con logica robusta
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, {
-          header: 7, // La riga 7 contiene le intestazioni
-          blankrows: false, // Ignora le righe vuote
+        // Estrazione dati discenti: intestazioni da riga 7, dati da riga 8
+        const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
+          header: 1, // Legge tutte le righe come array
+          defval: "",
+          blankrows: false,
         });
 
-        if (jsonData.length === 0) {
+        if (jsonData.length < 7) { // Deve esserci almeno la riga delle intestazioni
+          showError("Il file Excel non contiene dati sufficienti. Le intestazioni devono essere alla riga 7.");
+          return;
+        }
+
+        // Le intestazioni sono alla riga 7 (indice 6 dell'array)
+        const headers = jsonData[6].map(h => String(h).toLowerCase().trim());
+        
+        // I dati dei discenti partono dalla riga 8 (indice 7 dell'array)
+        const dataRows = jsonData.slice(7);
+
+        if (dataRows.length === 0) {
           showError("Nessun discente trovato a partire dalla riga 8. Controlla che il file Excel contenga dati validi.");
           return;
         }
 
-        const discentiData = jsonData.map((row, index) => {
-          // Normalizza le chiavi (intestazioni) in minuscolo e senza spazi extra
-          const normalizedRow: { [key: string]: any } = {};
-          for (const key in row) {
-            if (Object.prototype.hasOwnProperty.call(row, key)) {
-              normalizedRow[key.toLowerCase().trim()] = row[key];
-            }
+        const findIndex = (keywords: string[]) => headers.findIndex(h => keywords.some(kw => h.includes(kw)));
+
+        const matricolaIndex = findIndex(['matricola']);
+        const gradoIndex = findIndex(['grado']);
+        const categoriaIndex = findIndex(['cat.', 'cat', 'categoria']);
+        const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo', 'discente']);
+        const cognomeIndex = findIndex(['cognome']);
+        const nomeIndex = findIndex(['nome']);
+
+        const discentiData = dataRows.map((row, rowIndex) => {
+          let cognomeNome;
+          if (cognomeNomeIndex !== -1) {
+            cognomeNome = row[cognomeNomeIndex];
+          } else if (cognomeIndex !== -1 && nomeIndex !== -1) {
+            cognomeNome = `${row[cognomeIndex]} ${row[nomeIndex]}`.trim();
           }
 
-          // Cerca i dati usando diverse possibili intestazioni
-          const matricola = normalizedRow['matricola'];
-          const grado = normalizedRow['grado'] || normalizedRow['grado militare'];
-          const categoria = normalizedRow['cat.'] || normalizedRow['cat'] || normalizedRow['categoria'];
-          
-          let cognomeNome = normalizedRow['cognome e nome'] || normalizedRow['cognome e nome del discente'] || normalizedRow['nominativo'];
-          if (!cognomeNome && (normalizedRow['cognome'] && normalizedRow['nome'])) {
-            cognomeNome = `${normalizedRow['cognome']} ${normalizedRow['nome']}`.trim();
-          }
+          const matricola = matricolaIndex !== -1 ? row[matricolaIndex] : undefined;
+          const grado = gradoIndex !== -1 ? row[gradoIndex] : undefined;
+          const categoria = categoriaIndex !== -1 ? row[categoriaIndex] : undefined;
 
-          // Se mancano dati essenziali, salta la riga
           if (!matricola || !grado || !cognomeNome || !categoria) {
-            console.warn(`Riga ${index + 8} del file Excel saltata perché mancano dati essenziali. Dati letti:`, normalizedRow);
+            console.warn(`Riga ${rowIndex + 8} del file Excel saltata perché mancano dati essenziali. Dati letti:`, { matricola, grado, cognomeNome, categoria });
             return null;
           }
 
