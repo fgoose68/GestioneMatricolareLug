@@ -72,20 +72,17 @@ function Dashboard() {
 
         // Estrazione dati discenti: intestazioni da riga 7, dati da riga 8
         const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
-          header: 1, // Legge tutte le righe come array
+          header: 1,
           defval: "",
           blankrows: false,
         });
 
-        if (jsonData.length < 7) { // Deve esserci almeno la riga delle intestazioni
+        if (jsonData.length < 7) {
           showError("Il file Excel non contiene dati sufficienti. Le intestazioni devono essere alla riga 7.");
           return;
         }
 
-        // Le intestazioni sono alla riga 7 (indice 6 dell'array)
         const headers = jsonData[6].map(h => String(h).toLowerCase().trim());
-        
-        // I dati dei discenti partono dalla riga 8 (indice 7 dell'array)
         const dataRows = jsonData.slice(7);
 
         if (dataRows.length === 0) {
@@ -102,11 +99,17 @@ function Dashboard() {
         const cognomeIndex = findIndex(['cognome']);
         const nomeIndex = findIndex(['nome']);
 
+        const valueExists = (val: any) => val !== null && val !== undefined && String(val).trim() !== '';
+
         const discentiData = dataRows.map((row, rowIndex) => {
+          if (row.every(cell => !valueExists(cell))) {
+            return null;
+          }
+
           let cognomeNome;
-          if (cognomeNomeIndex !== -1) {
+          if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
             cognomeNome = row[cognomeNomeIndex];
-          } else if (cognomeIndex !== -1 && nomeIndex !== -1) {
+          } else if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
             cognomeNome = `${row[cognomeIndex]} ${row[nomeIndex]}`.trim();
           }
 
@@ -114,7 +117,7 @@ function Dashboard() {
           const grado = gradoIndex !== -1 ? row[gradoIndex] : undefined;
           const categoria = categoriaIndex !== -1 ? row[categoriaIndex] : undefined;
 
-          if (!matricola || !grado || !cognomeNome || !categoria) {
+          if (!valueExists(matricola) || !valueExists(grado) || !valueExists(cognomeNome) || !valueExists(categoria)) {
             console.warn(`Riga ${rowIndex + 8} del file Excel saltata perché mancano dati essenziali. Dati letti:`, { matricola, grado, cognomeNome, categoria });
             return null;
           }
@@ -265,7 +268,7 @@ function Dashboard() {
               <p><strong>Periodo del Corso:</strong> {courseInfo.period}</p>
             </CardContent>
           </Card>
-        )}
+        </Card>
 
         <Card className="md:col-span-2">
           <CardHeader>
