@@ -307,7 +307,7 @@ function Dashboard() {
               <p><strong>Periodo del Corso:</strong> {courseInfo.period}</p>
             </CardContent>
           </Card>
-        </Card>
+        )}
 
         <Card className="md:col-span-2">
           <CardHeader>
