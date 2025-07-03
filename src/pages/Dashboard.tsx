@@ -143,13 +143,22 @@ function Dashboard() {
               const parts = fullName.split(' ');
               
               if (parts.length > 1) {
-                  nome = parts[parts.length - 1]; // Last part is name
-                  cognome = parts.slice(0, parts.length - 1).join(' '); // Rest is surname
+                  let tempNome = parts[parts.length - 1]; // Tentative name
+                  let tempCognome = parts.slice(0, parts.length - 1).join(' '); // Tentative surname
                   
-                  // Heuristic to handle perceived surname duplication like "ROSSI ROSSI"
-                  const surnameWords = cognome.split(' ');
-                  if (surnameWords.length > 1 && surnameWords.every(word => word === surnameWords[0])) {
-                      cognome = surnameWords[0]; // If all words in surname are identical, take only the first
+                  // Check if the tentative surname and name are identical (case-insensitive)
+                  if (tempCognome.trim().toUpperCase() === tempNome.trim().toUpperCase()) {
+                      cognome = tempCognome; // Keep the surname
+                      nome = ''; // Set name to empty to avoid duplication
+                  } else {
+                      // Apply the previous heuristic for surname duplication (e.g., "ROSSI ROSSI")
+                      const surnameWords = tempCognome.split(' ');
+                      if (surnameWords.length > 1 && surnameWords.every(word => word.trim().toUpperCase() === surnameWords[0].trim().toUpperCase())) {
+                          cognome = surnameWords[0];
+                      } else {
+                          cognome = tempCognome;
+                      }
+                      nome = tempNome;
                   }
               } else {
                   // If only one word, assume it's the surname
