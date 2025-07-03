@@ -52,6 +52,7 @@ function Dashboard() {
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
 
+        // Estrazione dati corso
         const titleCell = worksheet['A5'];
         const locationCell = worksheet['C6'];
         const startDateCell = worksheet['D6'];
@@ -69,39 +70,55 @@ function Dashboard() {
         const period = `dal ${startDate} al ${endDate}`;
         setCourseInfo({ title, location, period });
 
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 7 });
+        // Estrazione dati discenti (logica migliorata)
+        const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
 
-        if (jsonData.length === 0) {
-          showError("Nessun discente trovato a partire dalla riga 8. Controlla il file.");
-          return;
+        if (jsonData.length < 8) {
+            showError("Nessun dato trovato a partire dalla riga 8. Controlla che il file Excel contenga le intestazioni alla riga 7 e i dati dei discenti subito dopo.");
+            return;
         }
 
-        const discentiData = jsonData.map((row, index) => {
-          const normalizedRow: { [key: string]: any } = {};
-          for (const key in row) {
-            if (Object.prototype.hasOwnProperty.call(row, key)) {
-              normalizedRow[key.toLowerCase().trim()] = row[key];
+        const headers = jsonData[6].map(h => String(h).toLowerCase().trim());
+        const dataRows = jsonData.slice(7);
+
+        const findIndex = (keywords: string[]) => {
+            return headers.findIndex(h => keywords.some(kw => h.includes(kw)));
+        };
+
+        const matricolaIndex = findIndex(['matricola']);
+        const gradoIndex = findIndex(['grado']);
+        const categoriaIndex = findIndex(['cat', 'categoria']);
+        const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo', 'discente']);
+        const cognomeIndex = findIndex(['cognome']);
+        const nomeIndex = findIndex(['nome']);
+
+        const discentiData = dataRows.map((row, rowIndex) => {
+            if (row.every(cell => cell === "")) return null; // Salta righe vuote
+
+            let cognomeNome;
+            if (cognomeNomeIndex !== -1) {
+                cognomeNome = row[cognomeNomeIndex];
+            } else if (cognomeIndex !== -1 && nomeIndex !== -1) {
+                cognomeNome = `${row[cognomeIndex]} ${row[nomeIndex]}`.trim();
             }
-          }
 
-          const matricola = normalizedRow.matricola;
-          const grado = normalizedRow.grado;
-          const cognome = normalizedRow.cognome;
-          const nome = normalizedRow.nome;
-          const categoria = normalizedRow.cat || normalizedRow.categoria;
+            const matricola = matricolaIndex !== -1 ? row[matricolaIndex] : undefined;
+            const grado = gradoIndex !== -1 ? row[gradoIndex] : undefined;
+            const categoria = categoriaIndex !== -1 ? row[categoriaIndex] : undefined;
 
-          if (!matricola || !grado || !cognome || !nome || !categoria) {
-            console.warn(`Riga ${index + 8} del file Excel saltata perché mancano dati. Dati letti:`, normalizedRow);
-            return null;
-          }
+            if (!matricola || !grado || !cognomeNome || !categoria) {
+                console.warn(`Riga ${rowIndex + 8} del file Excel saltata perché mancano dati. Dati letti:`, { matricola, grado, cognomeNome, categoria, originalRow: row });
+                return null;
+            }
 
-          return {
-            "Matricola": String(matricola),
-            "Grado militare": String(grado),
-            "Cognome e Nome del Discente": `${cognome} ${nome}`,
-            "Categoria": String(categoria),
-          };
+            return {
+                "Matricola": String(matricola),
+                "Grado militare": String(grado),
+                "Cognome e Nome del Discente": String(cognomeNome),
+                "Categoria": String(categoria),
+            };
         }).filter(d => d !== null) as Discente[];
+
 
         if (discentiData.length === 0) {
           showError("Nessun discente valido caricato. Controlla che le intestazioni (riga 7) e i dati (da riga 8) siano corretti.");
@@ -240,7 +257,7 @@ function Dashboard() {
               <p><strong>Periodo del Corso:</strong> {courseInfo.period}</p>
             </CardContent>
           </Card>
-        )}
+        </Card>
 
         <Card className="md:col-span-2">
           <CardHeader>
