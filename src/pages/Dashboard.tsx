@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { FileUp, FileText, Download, Eye } from "lucide-react";
+import { FileUp, FileText, Download, Eye, Info } from "lucide-react";
 import { format } from "date-fns";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,10 +20,12 @@ interface Discente {
   "Grado militare": string;
   "Cognome e Nome del Discente": string;
   Categoria: string;
-  Titolocorso: string;
-  Localita: string;
-  DataInizio: string;
-  DataFine: string;
+}
+
+interface CourseInfo {
+  title: string;
+  location: string;
+  period: string;
 }
 
 function Dashboard() {
@@ -31,6 +33,7 @@ function Dashboard() {
   const [wordFile, setWordFile] = useState<File | null>(null);
   const [discenti, setDiscenti] = useState<Discente[]>([]);
   const [signer, setSigner] = useState<string>("Il Direttore del Corso");
+  const [courseInfo, setCourseInfo] = useState<CourseInfo | null>(null);
 
   const handleExcelUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -41,16 +44,35 @@ function Dashboard() {
 
     reader.onload = (e) => {
       try {
+        setDiscenti([]);
+        setCourseInfo(null);
+
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array", cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        
-        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+        const titleCell = worksheet['A5'];
+        const locationCell = worksheet['C6'];
+        const startDateCell = worksheet['D6'];
+        const endDateCell = worksheet['E7'];
+
+        const title = titleCell ? String(titleCell.v) : "";
+        const location = locationCell ? String(locationCell.v) : "";
+        const startDate = startDateCell?.v ? (startDateCell.v instanceof Date ? format(startDateCell.v, "dd/MM/yyyy") : String(startDateCell.v)) : "";
+        const endDate = endDateCell?.v ? (endDateCell.v instanceof Date ? format(endDateCell.v, "dd/MM/yyyy") : String(endDateCell.v)) : "";
+
+        if (!title || !location || !startDate || !endDate) {
+          showError("Dati mancanti nel file Excel. Controlla le celle: Titolo (A5), Sede (C6), Data Inizio (D6), Data Fine (E7).");
+          return;
+        }
+        const period = `dal ${startDate} al ${endDate}`;
+        setCourseInfo({ title, location, period });
+
+        const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 7 });
 
         if (jsonData.length === 0) {
-          showError("Nessun dato trovato dopo la riga di intestazione. Controlla che il file non sia vuoto dalla seconda riga in poi.");
-          setDiscenti([]);
+          showError("Nessun discente trovato a partire dalla riga 8. Controlla il file.");
           return;
         }
 
@@ -67,13 +89,9 @@ function Dashboard() {
           const cognome = normalizedRow.cognome;
           const nome = normalizedRow.nome;
           const categoria = normalizedRow.cat || normalizedRow.categoria;
-          const titolocorso = normalizedRow.corso || normalizedRow.titolocorso;
-          const localita = normalizedRow.sede || normalizedRow.localita;
-          const dal = normalizedRow.dal;
-          const al = normalizedRow.al;
 
-          if (!matricola || !grado || !cognome || !nome || !categoria || !titolocorso || !localita || !dal || !al) {
-            console.warn(`Riga ${index + 2} del file Excel saltata perché mancano uno o più dati richiesti. Dati letti:`, row, 'Dati normalizzati:', normalizedRow);
+          if (!matricola || !grado || !cognome || !nome || !categoria) {
+            console.warn(`Riga ${index + 8} del file Excel saltata perché mancano dati. Dati letti:`, normalizedRow);
             return null;
           }
 
@@ -82,24 +100,20 @@ function Dashboard() {
             "Grado militare": String(grado),
             "Cognome e Nome del Discente": `${cognome} ${nome}`,
             "Categoria": String(categoria),
-            "Titolocorso": String(titolocorso),
-            "Localita": String(localita),
-            "DataInizio": dal instanceof Date ? format(dal, "dd/MM/yyyy") : String(dal),
-            "DataFine": al instanceof Date ? format(al, "dd/MM/yyyy") : String(al),
           };
         }).filter(d => d !== null) as Discente[];
 
         if (discentiData.length === 0) {
-          showError("Nessun discente valido caricato. Controlla che le intestazioni nella riga 1 del file Excel siano corrette (es. 'matricola', 'grado', 'sede', ecc.) e che i dati siano presenti in tutte le colonne a partire dalla riga 2.");
-          setDiscenti([]);
+          showError("Nessun discente valido caricato. Controlla che le intestazioni (riga 7) e i dati (da riga 8) siano corretti.");
         } else {
           setDiscenti(discentiData);
-          showSuccess(`Caricamento completato. Trovati ${discentiData.length} discenti validi.`);
+          showSuccess(`Caricamento completato. Trovati ${discentiData.length} discenti e dati del corso.`);
         }
       } catch (error) {
         console.error("Errore imprevisto durante la lettura del file Excel:", error);
         showError("Errore durante l'elaborazione del file. Assicurati che sia un file .xlsx valido e non corrotto.");
         setDiscenti([]);
+        setCourseInfo(null);
       }
     };
     reader.readAsArrayBuffer(file);
@@ -114,7 +128,7 @@ function Dashboard() {
   };
 
   const handleGenerateDocument = () => {
-    if (!wordFile || discenti.length === 0) {
+    if (!wordFile || discenti.length === 0 || !courseInfo) {
       showError("Per favore, carica il file Excel con i dati e il template Word.");
       return;
     }
@@ -135,10 +149,10 @@ function Dashboard() {
           });
 
           doc.setData({
-            titolocorso: discente.Titolocorso,
+            titolocorso: courseInfo.title,
             categoria: discente.Categoria,
-            localita: discente.Localita,
-            periodo_corso: `dal ${discente.DataInizio} al ${discente.DataFine}`,
+            localita: courseInfo.location,
+            periodo_corso: courseInfo.period,
             firmatario: `${signer}\nCol. Massimiliano Fortino`,
             grado: discente["Grado militare"],
             cognome_nome: discente["Cognome e Nome del Discente"],
@@ -201,7 +215,7 @@ function Dashboard() {
               <Input id="excel-file" type="file" accept=".xlsx" onChange={handleExcelUpload} />
               {excelFile && <p className="text-sm text-muted-foreground">Caricato: {excelFile.name}</p>}
               <p className="text-xs text-muted-foreground pt-2">
-                Il file deve avere le intestazioni alla riga 1 (es. matricola, grado, cognome, nome, cat, sede, dal, al, corso).
+                Titolo da A5, Sede da C6, Periodo da D6/E7, Intestazioni discenti da riga 7.
               </p>
             </div>
             <div className="space-y-2">
@@ -209,11 +223,24 @@ function Dashboard() {
               <Input id="word-file" type="file" accept=".docx" onChange={handleWordUpload} />
               {wordFile && <p className="text-sm text-muted-foreground">Caricato: {wordFile.name}</p>}
                <p className="text-xs text-muted-foreground pt-2">
-                Il template deve contenere i segnaposto come {`{corso}`}, {`{categoria}`}, {`{sede}`}, ecc.
+                Il template deve contenere i segnaposto come {`{titolocorso}`}, {`{categoria}`}, ecc.
               </p>
             </div>
           </CardContent>
         </Card>
+
+        {courseInfo && (
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Info size={20} /> Dati del Corso Estratti</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <p><strong>Titolo del Corso:</strong> {courseInfo.title}</p>
+              <p><strong>Sede del Corso:</strong> {courseInfo.location}</p>
+              <p><strong>Periodo del Corso:</strong> {courseInfo.period}</p>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="md:col-span-2">
           <CardHeader>
@@ -239,7 +266,7 @@ function Dashboard() {
         {discenti.length > 0 && (
           <Card className="md:col-span-2">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Eye size={20} /> Anteprima Dati da Excel</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Eye size={20} /> Anteprima Dati Discenti</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="mb-4"><strong>Numero di Discenti:</strong> <span className="font-mono p-1 bg-muted rounded-md">{discenti.length}</span></p>
@@ -251,10 +278,6 @@ function Dashboard() {
                       <TableHead>Grado</TableHead>
                       <TableHead>Cognome e Nome</TableHead>
                       <TableHead>Categoria</TableHead>
-                      <TableHead>Corso</TableHead>
-                      <TableHead>Sede</TableHead>
-                      <TableHead>Dal</TableHead>
-                      <TableHead>Al</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -264,24 +287,20 @@ function Dashboard() {
                         <TableCell>{d["Grado militare"]}</TableCell>
                         <TableCell>{d["Cognome e Nome del Discente"]}</TableCell>
                         <TableCell>{d.Categoria}</TableCell>
-                        <TableCell>{d.Titolocorso}</TableCell>
-                        <TableCell>{d.Localita}</TableCell>
-                        <TableCell>{d.DataInizio}</TableCell>
-                        <TableCell>{d.DataFine}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Controlla che i dati corrispondano.
+                Controlla che i dati dei discenti corrispondano.
               </p>
             </CardContent>
           </Card>
         )}
 
         <div className="md:col-span-2 flex justify-center">
-          <Button size="lg" onClick={handleGenerateDocument} className="w-full md:w-1/2 lg:w-1/3">
+          <Button size="lg" onClick={handleGenerateDocument} className="w-full md:w-1/2 lg:w-1/3" disabled={!wordFile || discenti.length === 0}>
             <Download className="mr-2 h-5 w-5" />
             Genera Documenti
           </Button>
