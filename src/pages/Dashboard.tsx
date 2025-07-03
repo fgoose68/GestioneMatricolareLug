@@ -142,10 +142,16 @@ function Dashboard() {
               cognomeNome = `${cognome} ${nome}`.trim();
           } 
           else if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
-              cognomeNome = String(row[cognomeNomeIndex]);
-              const parts = cognomeNome.split(' ');
-              cognome = parts.shift() || '';
-              nome = parts.join(' ');
+              const fullNome = String(row[cognomeNomeIndex]);
+              const lastSpaceIndex = fullNome.lastIndexOf(' ');
+              if (lastSpaceIndex > 0) {
+                cognome = fullNome.substring(0, lastSpaceIndex);
+                nome = fullNome.substring(lastSpaceIndex + 1);
+              } else {
+                cognome = fullNome;
+                nome = '';
+              }
+              cognomeNome = fullNome;
           }
 
           const matricola = matricolaIndex !== -1 ? row[matricolaIndex] : undefined;
