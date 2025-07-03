@@ -140,17 +140,23 @@ function Dashboard() {
           // Priorità 1: Colonna unica "Cognome e Nome" o "Nominativo"
           if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
               const fullName = String(row[cognomeNomeIndex]).trim();
-              const lastSpaceIndex = fullName.lastIndexOf(' ');
+              const parts = fullName.split(' ');
               
-              if (lastSpaceIndex > 0) {
-                  cognome = fullName.substring(0, lastSpaceIndex);
-                  nome = fullName.substring(lastSpaceIndex + 1);
+              if (parts.length > 1) {
+                  nome = parts[parts.length - 1]; // Last part is name
+                  cognome = parts.slice(0, parts.length - 1).join(' '); // Rest is surname
+                  
+                  // Heuristic to handle perceived surname duplication like "ROSSI ROSSI"
+                  const surnameWords = cognome.split(' ');
+                  if (surnameWords.length > 1 && surnameWords.every(word => word === surnameWords[0])) {
+                      cognome = surnameWords[0]; // If all words in surname are identical, take only the first
+                  }
               } else {
-                  // Se non c'è spazio, considera l'intera stringa come cognome
+                  // If only one word, assume it's the surname
                   cognome = fullName;
                   nome = '';
               }
-              cognomeNome = fullName; // Mantiene il nome completo originale
+              cognomeNome = fullName; // Keep the original full name
           } 
           // Priorità 2: Colonne separate per Cognome e Nome
           else if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
@@ -158,7 +164,7 @@ function Dashboard() {
               nome = String(row[nomeIndex]);
               cognomeNome = `${cognome} ${nome}`.trim();
           } else {
-              // Se nessuna delle combinazioni è trovata, logga un avviso
+              // If neither combination is found, log a warning
               console.warn(`Riga ${headerRowIndex + rowIndex + 2}: Impossibile estrarre Cognome e Nome. Controlla le intestazioni o i dati.`);
           }
 
