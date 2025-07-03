@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
-import PizZip from "pizzip";
+import PizZip from "pizip";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 
@@ -352,7 +352,7 @@ function Dashboard() {
               <p><strong>Titolo del Corso:</strong> {courseInfo.title}</p>
               <p><strong>Sede del Corso:</strong> {courseInfo.location}</p>
               <p><strong>Periodo del Corso:</strong> {courseInfo.period}</p>
-              <p><strong>Data Odierna:</strong> {courseInfo.currentDate}</p> {/* Visualizza la data odierna */}
+              <p><strong>Data della firma:</strong> {courseInfo.currentDate}</p> {/* Visualizza la data odierna */}
             </CardContent>
           </Card>
         )}
