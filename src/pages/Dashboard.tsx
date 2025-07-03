@@ -55,7 +55,7 @@ function Dashboard() {
         const titleCell = worksheet['A5'];
         const locationCell = worksheet['C6'];
         const startDateCell = worksheet['D6'];
-        const endDateCell = worksheet['E7'];
+        const endDateCell = worksheet['E6'];
 
         const title = titleCell ? String(titleCell.v) : "";
         const location = locationCell ? String(locationCell.v) : "";
@@ -63,7 +63,7 @@ function Dashboard() {
         const endDate = endDateCell?.v ? (endDateCell.v instanceof Date ? format(endDateCell.v, "dd/MM/yyyy") : String(endDateCell.v)) : "";
 
         if (!title || !location || !startDate || !endDate) {
-          showError("Dati mancanti nel file Excel. Controlla le celle: Titolo (A5), Sede (C6), Data Inizio (D6), Data Fine (E7).");
+          showError("Dati mancanti nel file Excel. Controlla le celle: Titolo (A5), Sede (C6), Data Inizio (D6), Data Fine (E6).");
           return;
         }
         const period = `dal ${startDate} al ${endDate}`;
@@ -215,7 +215,7 @@ function Dashboard() {
               <Input id="excel-file" type="file" accept=".xlsx" onChange={handleExcelUpload} />
               {excelFile && <p className="text-sm text-muted-foreground">Caricato: {excelFile.name}</p>}
               <p className="text-xs text-muted-foreground pt-2">
-                Titolo da A5, Sede da C6, Periodo da D6/E7, Intestazioni discenti da riga 7.
+                Titolo da A5, Sede da C6, Periodo da D6/E6, Intestazioni discenti da riga 7.
               </p>
             </div>
             <div className="space-y-2">
@@ -240,7 +240,7 @@ function Dashboard() {
               <p><strong>Periodo del Corso:</strong> {courseInfo.period}</p>
             </CardContent>
           </Card>
-        )}
+        </Card>
 
         <Card className="md:col-span-2">
           <CardHeader>
