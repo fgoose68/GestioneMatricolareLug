@@ -115,10 +115,10 @@ function Dashboard() {
 
           const matricola = matricolaIndex !== -1 ? row[matricolaIndex] : undefined;
           const grado = gradoIndex !== -1 ? row[gradoIndex] : undefined;
-          const categoria = categoriaIndex !== -1 ? row[categoriaIndex] : undefined;
+          const categoria = categoriaIndex !== -1 && valueExists(row[categoriaIndex]) ? row[categoriaIndex] : "";
 
-          if (!valueExists(matricola) || !valueExists(grado) || !valueExists(cognomeNome) || !valueExists(categoria)) {
-            console.warn(`Riga ${rowIndex + 8} del file Excel saltata perché mancano dati essenziali. Dati letti:`, { matricola, grado, cognomeNome, categoria });
+          if (!valueExists(matricola) || !valueExists(grado) || !valueExists(cognomeNome)) {
+            console.warn(`Riga ${rowIndex + 8} del file Excel saltata perché mancano dati essenziali. Dati letti:`, { matricola, grado, cognomeNome });
             return null;
           }
 
@@ -268,7 +268,7 @@ function Dashboard() {
               <p><strong>Periodo del Corso:</strong> {courseInfo.period}</p>
             </CardContent>
           </Card>
-        </Card>
+        )}
 
         <Card className="md:col-span-2">
           <CardHeader>
