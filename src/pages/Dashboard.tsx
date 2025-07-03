@@ -28,6 +28,7 @@ interface CourseInfo {
   title: string;
   location: string;
   period: string;
+  currentDate: string; // Aggiunto il campo per la data odierna
 }
 
 function Dashboard() {
@@ -78,7 +79,8 @@ function Dashboard() {
         }
 
         const period = `dal ${startDate} al ${endDate}`;
-        setCourseInfo({ title, location, period });
+        const today = format(new Date(), "dd/MM/yyyy"); // Data odierna
+        setCourseInfo({ title, location, period, currentDate: today });
         showSuccess(`Dati corso estratti: ${title}, ${location}, ${period}`);
 
 
@@ -238,7 +240,7 @@ function Dashboard() {
 
   const handleGenerateDocument = () => {
     if (!wordFile || discenti.length === 0 || !courseInfo) {
-      showError("Per favore, carica il file Excel con i dati e il template Word.");
+      showError("Per favor, carica il file Excel con i dati e il template Word.");
       return;
     }
 
@@ -268,6 +270,7 @@ function Dashboard() {
             cognome: discente.Cognome,
             nome: discente.Nome,
             matricola: discente.Matricola,
+            datafirma: courseInfo.currentDate, // Passa la data odierna al template
           });
 
           doc.render();
@@ -349,6 +352,7 @@ function Dashboard() {
               <p><strong>Titolo del Corso:</strong> {courseInfo.title}</p>
               <p><strong>Sede del Corso:</strong> {courseInfo.location}</p>
               <p><strong>Periodo del Corso:</strong> {courseInfo.period}</p>
+              <p><strong>Data Odierna:</strong> {courseInfo.currentDate}</p> {/* Visualizza la data odierna */}
             </CardContent>
           </Card>
         )}
