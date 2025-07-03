@@ -168,7 +168,11 @@ function Dashboard() {
 
           // Controllo rigoroso per dati essenziali
           if (!valueExists(matricola) || !valueExists(grado) || !valueExists(cognomeNome)) {
-            console.warn(`Riga ${headerRowIndex + rowIndex + 2} del file Excel saltata perché mancano dati essenziali (Matricola, Grado o Cognome/Nome). Dati letti:`, { matricola, grado, cognomeNome, cognome, nome, categoria });
+            const missingFields = [];
+            if (!valueExists(matricola)) missingFields.push("Matricola");
+            if (!valueExists(grado)) missingFields.push("Grado militare");
+            if (!valueExists(cognomeNome)) missingFields.push("Cognome e Nome del Discente (o Cognome/Nome separati)");
+            console.warn(`Riga ${headerRowIndex + rowIndex + 2} del file Excel saltata perché mancano dati essenziali: ${missingFields.join(', ')}. Dati letti:`, { matricola, grado, cognomeNome, cognome, nome, categoria });
             return null;
           }
 
