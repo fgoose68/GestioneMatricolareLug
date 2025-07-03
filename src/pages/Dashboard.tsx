@@ -76,6 +76,15 @@ function Dashboard() {
           blankrows: false,
         });
 
+        // Mostra un alert con i valori delle intestazioni dalla riga 7
+        if (jsonData.length > 6) { // Riga 7 è l'indice 6
+            const headerRowForAlert = jsonData[6];
+            const colC = headerRowForAlert[2] ? String(headerRowForAlert[2]).trim() : "N/D"; // Colonna C è indice 2
+            const colD = headerRowForAlert[3] ? String(headerRowForAlert[3]).trim() : "N/D"; // Colonna D è indice 3
+            const colE = headerRowForAlert[4] ? String(headerRowForAlert[4]).trim() : "N/D"; // Colonna E è indice 4
+            showSuccess(`Controllo Riga 7 -> C: "${colC}", D: "${colD}", E: "${colE}"`);
+        }
+
         // Trova dinamicamente la riga delle intestazioni
         let headerRowIndex = -1;
         for (let i = 0; i < jsonData.length; i++) {
@@ -109,8 +118,7 @@ function Dashboard() {
         const gradoIndex = findIndex(['grado']);
         const categoriaIndex = findIndex(['cat.', 'cat', 'categoria']);
         
-        // Logica migliorata per trovare nome e cognome
-        const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo']); // Ricerca più specifica
+        const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo']);
         const cognomeIndex = findIndex(['cognome']);
         const nomeIndex = findIndex(['nome']);
 
@@ -122,11 +130,9 @@ function Dashboard() {
           }
 
           let cognomeNome;
-          // Priorità 1: Cerca una colonna unica "Cognome e Nome" o "Nominativo"
           if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
             cognomeNome = row[cognomeNomeIndex];
           } 
-          // Priorità 2: Cerca colonne separate "Cognome" e "Nome" e le unisce
           else if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
             cognomeNome = `${row[cognomeIndex]} ${row[nomeIndex]}`.trim();
           }
@@ -286,7 +292,7 @@ function Dashboard() {
               <p><strong>Periodo del Corso:</strong> {courseInfo.period}</p>
             </CardContent>
           </Card>
-        )}
+        </Card>
 
         <Card className="md:col-span-2">
           <CardHeader>
