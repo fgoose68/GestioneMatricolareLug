@@ -70,23 +70,36 @@ function Dashboard() {
         const period = `dal ${startDate} al ${endDate}`;
         setCourseInfo({ title, location, period });
 
-        // Estrazione dati discenti: intestazioni da riga 7, dati da riga 8
         const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
           header: 1,
           defval: "",
           blankrows: false,
         });
 
-        if (jsonData.length < 7) {
-          showError("Il file Excel non contiene dati sufficienti. Le intestazioni devono essere alla riga 7.");
-          return;
+        // Trova dinamicamente la riga delle intestazioni
+        let headerRowIndex = -1;
+        for (let i = 0; i < jsonData.length; i++) {
+            const row = jsonData[i].map(cell => String(cell).toLowerCase().trim());
+            const hasMatricola = row.some(cell => cell.includes('matricola'));
+            const hasCognome = row.some(cell => cell.includes('cognome'));
+            const hasGrado = row.some(cell => cell.includes('grado'));
+
+            if (hasMatricola && (hasCognome || hasGrado)) {
+                headerRowIndex = i;
+                break;
+            }
         }
 
-        const headers = jsonData[6].map(h => String(h).toLowerCase().trim());
-        const dataRows = jsonData.slice(7);
+        if (headerRowIndex === -1) {
+            showError("Impossibile trovare la riga delle intestazioni. Assicurati che il file Excel contenga colonne come 'matricola', 'grado' e 'cognome'.");
+            return;
+        }
+
+        const headers = jsonData[headerRowIndex].map(h => String(h).toLowerCase().trim());
+        const dataRows = jsonData.slice(headerRowIndex + 1);
 
         if (dataRows.length === 0) {
-          showError("Nessun discente trovato a partire dalla riga 8. Controlla che il file Excel contenga dati validi.");
+          showError("Nessun discente trovato dopo la riga delle intestazioni. Controlla che il file Excel contenga dati validi.");
           return;
         }
 
@@ -118,7 +131,7 @@ function Dashboard() {
           const categoria = categoriaIndex !== -1 && valueExists(row[categoriaIndex]) ? row[categoriaIndex] : "";
 
           if (!valueExists(matricola) || !valueExists(grado) || !valueExists(cognomeNome)) {
-            console.warn(`Riga ${rowIndex + 8} del file Excel saltata perché mancano dati essenziali. Dati letti:`, { matricola, grado, cognomeNome });
+            console.warn(`Riga ${headerRowIndex + rowIndex + 2} del file Excel saltata perché mancano dati essenziali. Dati letti:`, { matricola, grado, cognomeNome });
             return null;
           }
 
@@ -132,7 +145,7 @@ function Dashboard() {
 
 
         if (discentiData.length === 0) {
-          showError("Nessun discente valido caricato. Controlla che le intestazioni (riga 7) e i dati (da riga 8) siano corretti e completi.");
+          showError("Nessun discente valido caricato. Controlla che le intestazioni e i dati siano corretti e completi.");
         } else {
           setDiscenti(discentiData);
           showSuccess(`Caricamento completato. Trovati ${discentiData.length} discenti e dati del corso.`);
@@ -243,7 +256,7 @@ function Dashboard() {
               <Input id="excel-file" type="file" accept=".xlsx" onChange={handleExcelUpload} />
               {excelFile && <p className="text-sm text-muted-foreground">Caricato: {excelFile.name}</p>}
               <p className="text-xs text-muted-foreground pt-2">
-                Titolo da A5, Sede da C6, Periodo da D6/E6, Intestazioni discenti da riga 7.
+                Titolo da A5, Sede da C6, Periodo da D6/E6. Le intestazioni dei discenti verranno trovate automaticamente.
               </p>
             </div>
             <div className="space-y-2">
@@ -268,7 +281,7 @@ function Dashboard() {
               <p><strong>Periodo del Corso:</strong> {courseInfo.period}</p>
             </CardContent>
           </Card>
-        )}
+        </Card>
 
         <Card className="md:col-span-2">
           <CardHeader>
