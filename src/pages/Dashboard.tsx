@@ -54,7 +54,7 @@ function Dashboard() {
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
 
-        // Estrazione dati corso
+        // Estrazione dati corso dalle celle originali (A5, C6, D6, E6)
         const titleCell = worksheet['A5'];
         const locationCell = worksheet['C6'];
         const startDateCell = worksheet['D6'];
@@ -65,12 +65,22 @@ function Dashboard() {
         const startDate = startDateCell?.v ? (startDateCell.v instanceof Date ? format(startDateCell.v, "dd/MM/yyyy") : String(startDateCell.v)) : "";
         const endDate = endDateCell?.v ? (endDateCell.v instanceof Date ? format(endDateCell.v, "dd/MM/yyyy") : String(endDateCell.v)) : "";
 
-        if (!title || !location || !startDate || !endDate) {
-          showError("Dati mancanti nel file Excel. Controlla le celle: Titolo (A5), Sede (C6), Data Inizio (D6), Data Fine (E6).");
-          return;
+        const missingCourseFields: string[] = [];
+        if (!title) missingCourseFields.push("Titolo (A5)");
+        if (!location) missingCourseFields.push("Sede (C6)");
+        if (!startDate) missingCourseFields.push("Data Inizio (D6)");
+        if (!endDate) missingCourseFields.push("Data Fine (E6)");
+
+        if (missingCourseFields.length > 0) {
+          showError(`Dati corso mancanti o non validi: ${missingCourseFields.join(", ")}. Controlla il formato del file.`);
+          setCourseInfo(null);
+          return; // Stop processing if essential course info is missing
         }
+
         const period = `dal ${startDate} al ${endDate}`;
         setCourseInfo({ title, location, period });
+        showSuccess(`Dati corso estratti: ${title}, ${location}, ${period}`);
+
 
         const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
           header: 1,
@@ -78,22 +88,12 @@ function Dashboard() {
           blankrows: false,
         });
 
-        // Mostra un alert con i valori delle intestazioni dalla riga 7
-        if (jsonData.length > 6) { // Riga 7 è l'indice 6
-            const headerRowForAlert = jsonData[6];
-            const colC = headerRowForAlert[2] ? String(headerRowForAlert[2]).trim() : "N/D"; // Colonna C è indice 2
-            const colD = headerRowForAlert[3] ? String(headerRowForAlert[3]).trim() : "N/D"; // Colonna D è indice 3
-            const colE = headerRowForAlert[4] ? String(headerRowForAlert[4]).trim() : "N/D"; // Colonna E è indice 4
-            showSuccess(`Controllo Riga 7 -> C: "${colC}", D: "${colD}", E: "${colE}"`);
-        }
-
         // Trova dinamicamente la riga delle intestazioni
         let headerRowIndex = -1;
         for (let i = 0; i < jsonData.length; i++) {
             const row = jsonData[i].map(cell => String(cell).toLowerCase().trim());
             const hasMatricola = row.some(cell => cell.includes('matricola'));
-            const hasCognome = row.some(cell => cell.includes('cognome'));
-            const hasNome = row.some(cell => cell.includes('nome'));
+            const hasCognome = row.some(cell => row.some(cell => cell.includes('cognome') || cell.includes('nominativo'))); // Check for 'cognome' or 'nominativo'
             const hasGrado = row.some(cell => cell.includes('grado'));
 
             if (hasMatricola && (hasCognome || hasGrado)) {
@@ -128,50 +128,66 @@ function Dashboard() {
         const valueExists = (val: any) => val !== null && val !== undefined && String(val).trim() !== '';
 
         const discentiData = dataRows.map((row, rowIndex) => {
+          // Salta righe completamente vuote
           if (row.every(cell => !valueExists(cell))) {
-            return null;
+            return null; 
           }
 
-          let cognomeNome: string | undefined;
-          let cognome: string | undefined;
-          let nome: string | undefined;
+          let cognomeNome: string = '';
+          let cognome: string = '';
+          let nome: string = '';
 
-          // Priorità 1: Colonne separate per Cognome e Nome
-          if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
+          // Priorità 1: Colonna unica "Cognome e Nome" o "Nominativo"
+          if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
+              const fullName = String(row[cognomeNomeIndex]).trim();
+              const lastSpaceIndex = fullName.lastIndexOf(' ');
+              
+              if (lastSpaceIndex > 0) {
+                  cognome = fullName.substring(0, lastSpaceIndex);
+                  nome = fullName.substring(lastSpaceIndex + 1);
+              } else {
+                  // Se non c'è spazio, considera l'intera stringa come cognome
+                  cognome = fullName;
+                  nome = '';
+              }
+              cognomeNome = fullName; // Mantiene il nome completo originale
+          } 
+          // Priorità 2: Colonne separate per Cognome e Nome
+          else if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
               cognome = String(row[cognomeIndex]);
               nome = String(row[nomeIndex]);
               cognomeNome = `${cognome} ${nome}`.trim();
-          } 
-          // Priorità 2: Colonna unica "Cognome e Nome"
-          else if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
-              const fullNome = String(row[cognomeNomeIndex]).trim();
-              const parts = fullNome.split(' ').filter(p => p); // Divide per spazio e rimuove parti vuote
-
-              if (parts.length > 1) {
-                  nome = parts.pop() || '';      // L'ultima parte è il nome
-                  cognome = parts.join(' '); // Tutto il resto è il cognome
-              } else {
-                  cognome = fullNome; // Se c'è una sola parola, la consideriamo il cognome
-                  nome = '';
-              }
-              cognomeNome = fullNome;
+          } else {
+              // Se nessuna delle combinazioni è trovata, logga un avviso
+              console.warn(`Riga ${headerRowIndex + rowIndex + 2}: Impossibile estrarre Cognome e Nome. Controlla le intestazioni o i dati.`);
           }
 
           const matricola = matricolaIndex !== -1 ? row[matricolaIndex] : undefined;
           const grado = gradoIndex !== -1 ? row[gradoIndex] : undefined;
           const categoria = categoriaIndex !== -1 && valueExists(row[categoriaIndex]) ? row[categoriaIndex] : "";
 
+          // Controllo rigoroso per dati essenziali
           if (!valueExists(matricola) || !valueExists(grado) || !valueExists(cognomeNome)) {
-            console.warn(`Riga ${headerRowIndex + rowIndex + 2} del file Excel saltata perché mancano dati essenziali. Dati letti:`, { matricola, grado, cognomeNome });
+            console.warn(`Riga ${headerRowIndex + rowIndex + 2} del file Excel saltata perché mancano dati essenziali (Matricola, Grado o Cognome/Nome). Dati letti:`, { matricola, grado, cognomeNome, cognome, nome, categoria });
             return null;
           }
+
+          // Logging dettagliato per debug
+          console.log(`Riga ${headerRowIndex + rowIndex + 2} - Estratto:`, {
+            Matricola: String(matricola),
+            Grado_militare: String(grado),
+            Cognome_e_Nome_del_Discente: cognomeNome,
+            Cognome: cognome,
+            Nome: nome,
+            Categoria: String(categoria),
+          });
 
           return {
             "Matricola": String(matricola),
             "Grado militare": String(grado),
             "Cognome e Nome del Discente": cognomeNome,
-            "Cognome": cognome || '',
-            "Nome": nome || '',
+            "Cognome": cognome,
+            "Nome": nome,
             "Categoria": String(categoria),
           };
         }).filter(d => d !== null) as Discente[];
@@ -181,7 +197,7 @@ function Dashboard() {
           showError("Nessun discente valido caricato. Controlla che le intestazioni e i dati siano corretti e completi.");
         } else {
           setDiscenti(discentiData);
-          showSuccess(`Caricamento completato. Trovati ${discentiData.length} discenti e dati del corso.`);
+          showSuccess(`Caricamento completato. Trovati ${discentiData.length} discenti.`);
         }
       } catch (error) {
         console.error("Errore imprevisto durante la lettura del file Excel:", error);
