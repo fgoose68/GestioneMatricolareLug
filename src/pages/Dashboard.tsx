@@ -108,7 +108,9 @@ function Dashboard() {
         const matricolaIndex = findIndex(['matricola']);
         const gradoIndex = findIndex(['grado']);
         const categoriaIndex = findIndex(['cat.', 'cat', 'categoria']);
-        const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo', 'discente']);
+        
+        // Logica migliorata per trovare nome e cognome
+        const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo']); // Ricerca più specifica
         const cognomeIndex = findIndex(['cognome']);
         const nomeIndex = findIndex(['nome']);
 
@@ -120,9 +122,12 @@ function Dashboard() {
           }
 
           let cognomeNome;
+          // Priorità 1: Cerca una colonna unica "Cognome e Nome" o "Nominativo"
           if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
             cognomeNome = row[cognomeNomeIndex];
-          } else if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
+          } 
+          // Priorità 2: Cerca colonne separate "Cognome" e "Nome" e le unisce
+          else if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
             cognomeNome = `${row[cognomeIndex]} ${row[nomeIndex]}`.trim();
           }
 
