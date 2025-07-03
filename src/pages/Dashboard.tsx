@@ -136,20 +136,23 @@ function Dashboard() {
           let cognome: string | undefined;
           let nome: string | undefined;
 
+          // Priorità 1: Colonne separate per Cognome e Nome
           if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
               cognome = String(row[cognomeIndex]);
               nome = String(row[nomeIndex]);
               cognomeNome = `${cognome} ${nome}`.trim();
           } 
+          // Priorità 2: Colonna unica "Cognome e Nome"
           else if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
-              const fullNome = String(row[cognomeNomeIndex]);
-              const lastSpaceIndex = fullNome.lastIndexOf(' ');
-              if (lastSpaceIndex > 0) {
-                cognome = fullNome.substring(0, lastSpaceIndex);
-                nome = fullNome.substring(lastSpaceIndex + 1);
+              const fullNome = String(row[cognomeNomeIndex]).trim();
+              const parts = fullNome.split(' ').filter(p => p); // Divide per spazio e rimuove parti vuote
+
+              if (parts.length > 1) {
+                  nome = parts.pop() || '';      // L'ultima parte è il nome
+                  cognome = parts.join(' '); // Tutto il resto è il cognome
               } else {
-                cognome = fullNome;
-                nome = '';
+                  cognome = fullNome; // Se c'è una sola parola, la consideriamo il cognome
+                  nome = '';
               }
               cognomeNome = fullNome;
           }
