@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
-import PizZip from "pizip";
+import PizZip from "pizzip"; // Corretto da "pizip" a "pizzip"
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 
@@ -197,7 +197,7 @@ function Dashboard() {
           console.log(`Riga ${headerRowIndex + rowIndex + 2} - Estratto:`, {
             Matricola: String(matricola),
             Grado_militare: String(grado),
-            Cognome_e_Nome_del_Discente: cognomeNome,
+            "Cognome e Nome del Discente": cognomeNome,
             Cognome: cognome,
             Nome: nome,
             Categoria: String(categoria),
