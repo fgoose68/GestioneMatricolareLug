@@ -19,6 +19,8 @@ interface Discente {
   Matricola: string;
   "Grado militare": string;
   "Cognome e Nome del Discente": string;
+  Cognome: string;
+  Nome: string;
   Categoria: string;
 }
 
@@ -91,6 +93,7 @@ function Dashboard() {
             const row = jsonData[i].map(cell => String(cell).toLowerCase().trim());
             const hasMatricola = row.some(cell => cell.includes('matricola'));
             const hasCognome = row.some(cell => cell.includes('cognome'));
+            const hasNome = row.some(cell => cell.includes('nome'));
             const hasGrado = row.some(cell => cell.includes('grado'));
 
             if (hasMatricola && (hasCognome || hasGrado)) {
@@ -129,12 +132,20 @@ function Dashboard() {
             return null;
           }
 
-          let cognomeNome;
-          if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
-            cognomeNome = row[cognomeNomeIndex];
+          let cognomeNome: string | undefined;
+          let cognome: string | undefined;
+          let nome: string | undefined;
+
+          if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
+              cognome = String(row[cognomeIndex]);
+              nome = String(row[nomeIndex]);
+              cognomeNome = `${cognome} ${nome}`.trim();
           } 
-          else if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
-            cognomeNome = `${row[cognomeIndex]} ${row[nomeIndex]}`.trim();
+          else if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
+              cognomeNome = String(row[cognomeNomeIndex]);
+              const parts = cognomeNome.split(' ');
+              cognome = parts.shift() || '';
+              nome = parts.join(' ');
           }
 
           const matricola = matricolaIndex !== -1 ? row[matricolaIndex] : undefined;
@@ -149,7 +160,9 @@ function Dashboard() {
           return {
             "Matricola": String(matricola),
             "Grado militare": String(grado),
-            "Cognome e Nome del Discente": String(cognomeNome),
+            "Cognome e Nome del Discente": cognomeNome,
+            "Cognome": cognome || '',
+            "Nome": nome || '',
             "Categoria": String(categoria),
           };
         }).filter(d => d !== null) as Discente[];
@@ -208,6 +221,8 @@ function Dashboard() {
             firmatario: `${signer}\nCol. Massimiliano Fortino`,
             grado: discente["Grado militare"],
             cognome_nome: discente["Cognome e Nome del Discente"],
+            cognome: discente.Cognome,
+            nome: discente.Nome,
             matricola: discente.Matricola,
           });
 
@@ -292,7 +307,7 @@ function Dashboard() {
               <p><strong>Periodo del Corso:</strong> {courseInfo.period}</p>
             </CardContent>
           </Card>
-        )}
+        </Card>
 
         <Card className="md:col-span-2">
           <CardHeader>
@@ -328,7 +343,8 @@ function Dashboard() {
                     <TableRow>
                       <TableHead>Matricola</TableHead>
                       <TableHead>Grado</TableHead>
-                      <TableHead>Cognome e Nome</TableHead>
+                      <TableHead>Cognome</TableHead>
+                      <TableHead>Nome</TableHead>
                       <TableHead>Categoria</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -337,7 +353,8 @@ function Dashboard() {
                       <TableRow key={index}>
                         <TableCell>{d.Matricola}</TableCell>
                         <TableCell>{d["Grado militare"]}</TableCell>
-                        <TableCell>{d["Cognome e Nome del Discente"]}</TableCell>
+                        <TableCell>{d.Cognome}</TableCell>
+                        <TableCell>{d.Nome}</TableCell>
                         <TableCell>{d.Categoria}</TableCell>
                       </TableRow>
                     ))}
