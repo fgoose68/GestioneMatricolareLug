@@ -180,8 +180,8 @@ function Dashboard() {
                       // All parts are uppercase (e.g., "IMPERIALE FABRIZIO", "DE ROSSI", "ROSSI ROSSI")
                       // Heuristic: If the first two parts are identical (e.g., "ROSSI ROSSI"), assume it's a single surname.
                       if (parts.length >= 2 && parts[0].toUpperCase() === parts[1].toUpperCase()) {
-                          cognome = parts[0]; // Take only the first part as surname
-                          nome = '';
+                          cognome = parts[0]; 
+                          nome = parts[1]; // Modifica: Assegna la seconda parte come nome
                           console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato tutto maiuscolo, cognome ripetuto. Cognome: '${cognome}', Nome: '${nome}'`);
                       } else if (parts.length > 1) {
                           // Assume the last word is the name, and the rest is the surname.
