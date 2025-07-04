@@ -156,56 +156,30 @@ function Dashboard() {
                   cognome = '';
                   nome = '';
               } else if (parts.length === 1) {
+                  // If only one word, assume it's the surname and name is empty
                   cognome = parts[0];
                   nome = '';
               } else {
-                  // Try to find the surname (often ALL CAPS) and the name.
-                  let potentialCognomeParts: string[] = [];
-                  let potentialNomeParts: string[] = [];
-                  let foundNameStart = false;
-
-                  for (const part of parts) {
-                      // If a part is not all uppercase, it's likely the start of the name
-                      if (!foundNameStart && part.toUpperCase() !== part) {
-                          foundNameStart = true;
-                      }
-                      if (!foundNameStart) {
-                          potentialCognomeParts.push(part);
-                      } else {
-                          potentialNomeParts.push(part);
-                      }
-                  }
-
-                  if (potentialCognomeParts.length > 0 && potentialNomeParts.length > 0) {
-                      // Case: "ROSSI Mario" or "DE ROSSI Mario"
-                      cognome = potentialCognomeParts.join(' ');
-                      nome = potentialNomeParts.join(' ');
-                  } else if (potentialCognomeParts.length > 0 && potentialNomeParts.length === 0) {
-                      // Case: "ROSSI ROSSI" or just "ROSSI" (all parts are all caps)
-                      // If all parts are all caps, assume the first part is the surname and the rest is part of the surname,
-                      // or if it's a duplicate, the name is empty.
-                      if (parts.length > 1 && parts[0].toUpperCase() === parts[1].toUpperCase()) {
-                          cognome = parts[0]; // Take only the first part as surname
-                          nome = '';
-                      } else {
-                          cognome = fullName; // Assume it's a single or multi-word surname without a distinct name
-                          nome = '';
-                      }
-                  } else if (potentialCognomeParts.length === 0 && potentialNomeParts.length > 0) {
-                      // Case: "Mario Rossi" (Name Surname, where surname is not all caps) or "mario rossi" (all lowercase)
-                      // If no all-caps surname was found, assume the LAST word is the surname
-                      // and the rest is the name. This handles "Mario Rossi" -> cognome="Rossi", nome="Mario"
-                      cognome = potentialNomeParts[potentialNomeParts.length - 1];
-                      nome = potentialNomeParts.slice(0, potentialNomeParts.length - 1).join(' ');
+                  // Heuristic for splitting: assume the last word is the name if it's not all uppercase,
+                  // otherwise, assume the entire string is the surname.
+                  let potentialName = parts[parts.length - 1];
+                  if (potentialName.toUpperCase() !== potentialName) {
+                      // Last part is not all uppercase, likely the name
+                      nome = potentialName;
+                      cognome = parts.slice(0, parts.length - 1).join(' ');
                   } else {
-                      // Fallback for unexpected formats, treat as single surname
+                      // Last part is all uppercase, or all parts are all uppercase.
+                      // Assume the entire string is the surname.
                       cognome = fullName;
                       nome = '';
                   }
               }
           } else {
-              // If neither combination is found, log a warning
+              // If no valid name columns found, set to empty to avoid undefined in table
               console.warn(`Riga ${headerRowIndex + rowIndex + 2}: Impossibile estrarre Cognome e Nome. Controlla le intestazioni o i dati.`);
+              cognome = '';
+              nome = '';
+              cognomeNome = '';
           }
 
           const matricola = matricolaIndex !== -1 ? row[matricolaIndex] : undefined;
