@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
-import PizZip from "pizzip"; // Corretto da "pizip" a "pizzip"
+import PizZip from "pizzip";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 
@@ -148,31 +148,61 @@ function Dashboard() {
           // Priority 2: Combined "Cognome e Nome" or "Nominativo" column
           else if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
               const fullName = String(row[cognomeNomeIndex]).trim();
-              const parts = fullName.split(' ');
-              
-              if (parts.length > 1) {
-                  let tempNome = parts[parts.length - 1]; 
-                  let tempCognome = parts.slice(0, parts.length - 1).join(' '); 
-                  
-                  // Heuristic for surname duplication (e.g., "ROSSI ROSSI")
-                  if (tempCognome.trim().toUpperCase() === tempNome.trim().toUpperCase()) {
-                      cognome = tempCognome; 
-                      nome = ''; 
-                  } else {
-                      const surnameWords = tempCognome.split(' ');
-                      if (surnameWords.length > 1 && surnameWords.every(word => word.trim().toUpperCase() === surnameWords[0].trim().toUpperCase())) {
-                          cognome = surnameWords[0];
-                      } else {
-                          cognome = tempCognome;
-                      }
-                      nome = tempNome;
-                  }
-              } else {
-                  // If only one word, assume it's the surname
-                  cognome = fullName;
+              cognomeNome = fullName;
+
+              const parts = fullName.split(' ').filter(p => p.length > 0);
+
+              if (parts.length === 0) {
+                  cognome = '';
                   nome = '';
+              } else if (parts.length === 1) {
+                  cognome = parts[0];
+                  nome = '';
+              } else {
+                  // Try to find the surname (often ALL CAPS) and the name.
+                  let potentialCognomeParts: string[] = [];
+                  let potentialNomeParts: string[] = [];
+                  let foundNameStart = false;
+
+                  for (const part of parts) {
+                      // If a part is not all uppercase, it's likely the start of the name
+                      if (!foundNameStart && part.toUpperCase() !== part) {
+                          foundNameStart = true;
+                      }
+                      if (!foundNameStart) {
+                          potentialCognomeParts.push(part);
+                      } else {
+                          potentialNomeParts.push(part);
+                      }
+                  }
+
+                  if (potentialCognomeParts.length > 0 && potentialNomeParts.length > 0) {
+                      // Case: "ROSSI Mario" or "DE ROSSI Mario"
+                      cognome = potentialCognomeParts.join(' ');
+                      nome = potentialNomeParts.join(' ');
+                  } else if (potentialCognomeParts.length > 0 && potentialNomeParts.length === 0) {
+                      // Case: "ROSSI ROSSI" or just "ROSSI" (all parts are all caps)
+                      // If all parts are all caps, assume the first part is the surname and the rest is part of the surname,
+                      // or if it's a duplicate, the name is empty.
+                      if (parts.length > 1 && parts[0].toUpperCase() === parts[1].toUpperCase()) {
+                          cognome = parts[0]; // Take only the first part as surname
+                          nome = '';
+                      } else {
+                          cognome = fullName; // Assume it's a single or multi-word surname without a distinct name
+                          nome = '';
+                      }
+                  } else if (potentialCognomeParts.length === 0 && potentialNomeParts.length > 0) {
+                      // Case: "Mario Rossi" (Name Surname, where surname is not all caps) or "mario rossi" (all lowercase)
+                      // If no all-caps surname was found, assume the LAST word is the surname
+                      // and the rest is the name. This handles "Mario Rossi" -> cognome="Rossi", nome="Mario"
+                      cognome = potentialNomeParts[potentialNomeParts.length - 1];
+                      nome = potentialNomeParts.slice(0, potentialNomeParts.length - 1).join(' ');
+                  } else {
+                      // Fallback for unexpected formats, treat as single surname
+                      cognome = fullName;
+                      nome = '';
+                  }
               }
-              cognomeNome = fullName; // Keep the original full name from this column
           } else {
               // If neither combination is found, log a warning
               console.warn(`Riga ${headerRowIndex + rowIndex + 2}: Impossibile estrarre Cognome e Nome. Controlla le intestazioni o i dati.`);
