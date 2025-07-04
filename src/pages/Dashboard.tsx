@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
-import PizZip from "pizzip"; // Corretto da "pizip" a "pizzip"
+import PizZip from "pizip";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 
@@ -123,9 +123,9 @@ function Dashboard() {
         const gradoIndex = findIndex(['grado']);
         const categoriaIndex = findIndex(['cat.', 'cat', 'categoria']);
         
-        const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo']);
-        const cognomeIndex = findIndex(['cognome']);
-        const nomeIndex = findIndex(['nome']);
+        const cognomeIndex = findIndex(['cognome']); // Check for separate cognome first
+        const nomeIndex = findIndex(['nome']);       // Check for separate nome first
+        const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo']); // Combined name last
 
         const valueExists = (val: any) => val !== null && val !== undefined && String(val).trim() !== '';
 
@@ -139,21 +139,26 @@ function Dashboard() {
           let cognome: string = '';
           let nome: string = '';
 
-          // Priorità 1: Colonna unica "Cognome e Nome" o "Nominativo"
-          if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
+          // Priority 1: Separate Cognome and Nome columns
+          if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
+              cognome = String(row[cognomeIndex]).trim();
+              nome = String(row[nomeIndex]).trim();
+              cognomeNome = `${cognome} ${nome}`.trim();
+          } 
+          // Priority 2: Combined "Cognome e Nome" or "Nominativo" column
+          else if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
               const fullName = String(row[cognomeNomeIndex]).trim();
               const parts = fullName.split(' ');
               
               if (parts.length > 1) {
-                  let tempNome = parts[parts.length - 1]; // Tentative name
-                  let tempCognome = parts.slice(0, parts.length - 1).join(' '); // Tentative surname
+                  let tempNome = parts[parts.length - 1]; 
+                  let tempCognome = parts.slice(0, parts.length - 1).join(' '); 
                   
-                  // Check if the tentative surname and name are identical (case-insensitive)
+                  // Heuristic for surname duplication (e.g., "ROSSI ROSSI")
                   if (tempCognome.trim().toUpperCase() === tempNome.trim().toUpperCase()) {
-                      cognome = tempCognome; // Keep the surname
-                      nome = ''; // Set name to empty to avoid duplication
+                      cognome = tempCognome; 
+                      nome = ''; 
                   } else {
-                      // Apply the previous heuristic for surname duplication (e.g., "ROSSI ROSSI")
                       const surnameWords = tempCognome.split(' ');
                       if (surnameWords.length > 1 && surnameWords.every(word => word.trim().toUpperCase() === surnameWords[0].trim().toUpperCase())) {
                           cognome = surnameWords[0];
@@ -167,13 +172,7 @@ function Dashboard() {
                   cognome = fullName;
                   nome = '';
               }
-              cognomeNome = fullName; // Keep the original full name
-          } 
-          // Priorità 2: Colonne separate per Cognome e Nome
-          else if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
-              cognome = String(row[cognomeIndex]);
-              nome = String(row[nomeIndex]);
-              cognomeNome = `${cognome} ${nome}`.trim();
+              cognomeNome = fullName; // Keep the original full name from this column
           } else {
               // If neither combination is found, log a warning
               console.warn(`Riga ${headerRowIndex + rowIndex + 2}: Impossibile estrarre Cognome e Nome. Controlla le intestazioni o i dati.`);
@@ -352,7 +351,7 @@ function Dashboard() {
               <p><strong>Titolo del Corso:</strong> {courseInfo.title}</p>
               <p><strong>Sede del Corso:</strong> {courseInfo.location}</p>
               <p><strong>Periodo del Corso:</strong> {courseInfo.period}</p>
-              <p><strong>Data della firma:</strong> {courseInfo.currentDate}</p> {/* Visualizza la data odierna */}
+              <p><strong>Data della firma:</strong> {courseInfo.currentDate}</p>
             </CardContent>
           </Card>
         )}
