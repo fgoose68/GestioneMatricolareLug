@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
-import PizZip from "pizip";
+import PizZip from "pizzip"; // Corretto da "pizip" a "pizzip"
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 
