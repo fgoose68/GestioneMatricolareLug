@@ -90,22 +90,11 @@ function Dashboard() {
           blankrows: false,
         });
 
-        // Trova dinamicamente la riga delle intestazioni
-        let headerRowIndex = -1;
-        for (let i = 0; i < jsonData.length; i++) {
-            const row = jsonData[i].map(cell => String(cell).toLowerCase().trim());
-            const hasMatricola = row.some(cell => cell.includes('matricola'));
-            const hasCognome = row.some(cell => row.some(cell => cell.includes('cognome') || cell.includes('nominativo'))); // Check for 'cognome' or 'nominativo'
-            const hasGrado = row.some(cell => cell.includes('grado'));
+        // Imposta la riga delle intestazioni alla riga 7 (indice 6 in un array 0-based)
+        const headerRowIndex = 6; 
 
-            if (hasMatricola && (hasCognome || hasGrado)) {
-                headerRowIndex = i;
-                break;
-            }
-        }
-
-        if (headerRowIndex === -1) {
-            showError("Impossibile trovare la riga delle intestazioni. Assicurati che il file Excel contenga colonne come 'matricola', 'grado' e 'cognome'.");
+        if (jsonData.length <= headerRowIndex) {
+            showError("Il file Excel non contiene abbastanza righe per trovare le intestazioni alla riga 7.");
             return;
         }
 
@@ -199,7 +188,7 @@ function Dashboard() {
                           // This handles "IMPERIALE FABRIZIO" -> cognome="IMPERIALE", nome="FABRIZIO"
                           // NOTE: This heuristic might split multi-word surnames like "DE ROSSI" into "DE" (cognome) and "ROSSI" (nome).
                           // It's a trade-off to correctly handle "IMPERIALE FABRIZIO" where FABRIZIO is the name.
-                          const lastPart = parts[parts.length - 1]; // FIX: Ensure lastPart is defined
+                          const lastPart = parts[parts.length - 1]; 
                           cognome = parts.slice(0, parts.length - 1).join(' ');
                           nome = lastPart;
                           console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato tutto maiuscolo, diviso. Cognome: '${cognome}', Nome: '${nome}'`);
