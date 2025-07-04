@@ -160,18 +160,41 @@ function Dashboard() {
                   cognome = parts[0];
                   nome = '';
               } else {
-                  // Heuristic for splitting: assume the last word is the name if it's not all uppercase,
-                  // otherwise, assume the entire string is the surname.
-                  let potentialName = parts[parts.length - 1];
-                  if (potentialName.toUpperCase() !== potentialName) {
-                      // Last part is not all uppercase, likely the name
-                      nome = potentialName;
-                      cognome = parts.slice(0, parts.length - 1).join(' ');
+                  const allPartsAreUppercase = parts.every(part => part.toUpperCase() === part);
+
+                  if (!allPartsAreUppercase) {
+                      // Find the index where the name likely starts (first non-uppercase word)
+                      let nameStartIndex = -1;
+                      for (let i = 0; i < parts.length; i++) {
+                          if (parts[i].toUpperCase() !== parts[i]) {
+                              nameStartIndex = i;
+                              break;
+                          }
+                      }
+
+                      if (nameStartIndex !== -1) {
+                          cognome = parts.slice(0, nameStartIndex).join(' ');
+                          nome = parts.slice(nameStartIndex).join(' ');
+                      } else {
+                          // Fallback: if no non-uppercase part found but not all parts are uppercase,
+                          // this case should ideally not be hit. Treat as full name as surname.
+                          cognome = fullName;
+                          nome = '';
+                      }
                   } else {
-                      // Last part is all uppercase, or all parts are all uppercase.
-                      // Assume the entire string is the surname.
-                      cognome = fullName;
-                      nome = '';
+                      // All parts are uppercase (e.g., "IMPERIALE FABRIZIO", "DE ROSSI", "ROSSI ROSSI")
+                      // If the first two parts are identical (e.g., "ROSSI ROSSI"), assume it's a single surname.
+                      if (parts.length >= 2 && parts[0].toUpperCase() === parts[1].toUpperCase()) {
+                          cognome = parts[0]; // Take only the first part as surname
+                          nome = '';
+                      } else {
+                          // For "IMPERIALE FABRIZIO" or "DE ROSSI" (all uppercase)
+                          // Assume the last word is the name, and the rest is the surname.
+                          // NOTE: This heuristic might split multi-word surnames like "DE ROSSI" into "DE" (cognome) and "ROSSI" (nome).
+                          // It's a trade-off to correctly handle "IMPERIALE FABRIZIO" where FABRIZIO is the name.
+                          cognome = parts.slice(0, parts.length - 1).join(' ');
+                          nome = lastPart;
+                      }
                   }
               }
           } else {
