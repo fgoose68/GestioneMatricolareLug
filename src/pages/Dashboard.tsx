@@ -52,8 +52,24 @@ function Dashboard() {
 
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array", cellDates: true });
+
+        // Aggiungi controlli per la validità del workbook e dei fogli
+        if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+          showError("Il file Excel non contiene fogli di lavoro validi.");
+          setDiscenti([]);
+          setCourseInfo(null);
+          return;
+        }
+
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
+
+        if (!worksheet) {
+          showError(`Impossibile accedere al foglio di lavoro "${sheetName}". Il file potrebbe essere corrotto o il foglio non esiste.`);
+          setDiscenti([]);
+          setCourseInfo(null);
+          return;
+        }
 
         // Estrazione dati corso dalle celle originali (A5, C6, D6, E6)
         const titleCell = worksheet['A5'];
