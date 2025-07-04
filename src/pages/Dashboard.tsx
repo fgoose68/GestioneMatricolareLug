@@ -144,29 +144,33 @@ function Dashboard() {
               cognome = String(row[cognomeIndex]).trim();
               nome = String(row[nomeIndex]).trim();
               cognomeNome = `${cognome} ${nome}`.trim();
+              console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Usando colonne separate. Cognome: '${cognome}', Nome: '${nome}'`);
           } 
           // Priority 2: Combined "Cognome e Nome" or "Nominativo" column
           else if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
               const fullName = String(row[cognomeNomeIndex]).trim();
-              cognomeNome = fullName;
+              cognomeNome = fullName; // This will be the full string for the template
 
               const parts = fullName.split(' ').filter(p => p.length > 0);
 
               if (parts.length === 0) {
                   cognome = '';
                   nome = '';
+                  console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato vuoto. Cognome: '${cognome}', Nome: '${nome}'`);
               } else if (parts.length === 1) {
                   // If only one word, assume it's the surname and name is empty
                   cognome = parts[0];
                   nome = '';
+                  console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato singola parola. Cognome: '${cognome}', Nome: '${nome}'`);
               } else {
                   const allPartsAreUppercase = parts.every(part => part.toUpperCase() === part);
 
                   if (!allPartsAreUppercase) {
-                      // Find the index where the name likely starts (first non-uppercase word)
+                      // Case: "ROSSI Mario" or "De Rossi Mario" (mixed case)
+                      // Find the first part that is not all uppercase, assume it's the start of the name.
                       let nameStartIndex = -1;
                       for (let i = 0; i < parts.length; i++) {
-                          if (parts[i].toUpperCase() !== parts[i]) {
+                          if (parts[i].toUpperCase() !== parts[i]) { // Found a non-uppercase part
                               nameStartIndex = i;
                               break;
                           }
@@ -175,31 +179,41 @@ function Dashboard() {
                       if (nameStartIndex !== -1) {
                           cognome = parts.slice(0, nameStartIndex).join(' ');
                           nome = parts.slice(nameStartIndex).join(' ');
+                          console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato misto. Cognome: '${cognome}', Nome: '${nome}'`);
                       } else {
                           // Fallback: if no non-uppercase part found but not all parts are uppercase,
                           // this case should ideally not be hit. Treat as full name as surname.
                           cognome = fullName;
                           nome = '';
+                          console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato misto fallback. Cognome: '${cognome}', Nome: '${nome}'`);
                       }
                   } else {
                       // All parts are uppercase (e.g., "IMPERIALE FABRIZIO", "DE ROSSI", "ROSSI ROSSI")
-                      // If the first two parts are identical (e.g., "ROSSI ROSSI"), assume it's a single surname.
+                      // Heuristic: If the first two parts are identical (e.g., "ROSSI ROSSI"), assume it's a single surname.
                       if (parts.length >= 2 && parts[0].toUpperCase() === parts[1].toUpperCase()) {
                           cognome = parts[0]; // Take only the first part as surname
                           nome = '';
-                      } else {
-                          // For "IMPERIALE FABRIZIO" or "DE ROSSI" (all uppercase)
+                          console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato tutto maiuscolo, cognome ripetuto. Cognome: '${cognome}', Nome: '${nome}'`);
+                      } else if (parts.length > 1) {
                           // Assume the last word is the name, and the rest is the surname.
+                          // This handles "IMPERIALE FABRIZIO" -> cognome="IMPERIALE", nome="FABRIZIO"
                           // NOTE: This heuristic might split multi-word surnames like "DE ROSSI" into "DE" (cognome) and "ROSSI" (nome).
                           // It's a trade-off to correctly handle "IMPERIALE FABRIZIO" where FABRIZIO is the name.
+                          const lastPart = parts[parts.length - 1]; // FIX: Ensure lastPart is defined
                           cognome = parts.slice(0, parts.length - 1).join(' ');
                           nome = lastPart;
+                          console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato tutto maiuscolo, diviso. Cognome: '${cognome}', Nome: '${nome}'`);
+                      } else {
+                          // Should be caught by parts.length === 1, but as a safeguard
+                          cognome = fullName;
+                          nome = '';
+                          console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato tutto maiuscolo, singola parte fallback. Cognome: '${cognome}', Nome: '${nome}'`);
                       }
                   }
               }
           } else {
               // If no valid name columns found, set to empty to avoid undefined in table
-              console.warn(`Riga ${headerRowIndex + rowIndex + 2}: Impossibile estrarre Cognome e Nome. Controlla le intestazioni o i dati.`);
+              console.warn(`Riga ${headerRowIndex + rowIndex + 2} del file Excel saltata perché mancano dati essenziali per Cognome e Nome. Dati letti:`, { matricola, grado, cognomeNome, cognome, nome, categoria });
               cognome = '';
               nome = '';
               cognomeNome = '';
@@ -220,7 +234,7 @@ function Dashboard() {
           }
 
           // Logging dettagliato per debug
-          console.log(`Riga ${headerRowIndex + rowIndex + 2} - Estratto:`, {
+          console.log(`Riga ${headerRowIndex + rowIndex + 2} - Estratto finale:`, {
             Matricola: String(matricola),
             Grado_militare: String(grado),
             "Cognome e Nome del Discente": cognomeNome,
