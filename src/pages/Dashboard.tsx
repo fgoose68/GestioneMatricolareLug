@@ -166,30 +166,40 @@ function Dashboard() {
           let cognome: string = '';
           let nome: string = '';
 
+          // Priority 1: Use separate 'Cognome' and 'Nome' columns if they exist and are populated.
           if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex])) {
               cognome = getCellValueAsString(row[cognomeIndex]);
               nome = getCellValueAsString(row[nomeIndex]);
               cognomeNome = `${cognome} ${nome}`.trim();
           } 
+          // Priority 2: Fallback to splitting a combined 'Cognome e Nome' column.
           else if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
               const fullName = getCellValueAsString(row[cognomeNomeIndex]);
               cognomeNome = fullName;
               const parts = fullName.split(' ').filter(p => p.length > 0);
 
-              if (parts.length > 1) {
-                nome = parts.pop() as string;
-                cognome = parts.join(' ');
-              } else if (parts.length === 1) {
-                cognome = parts[0];
-                nome = '';
-              } else {
-                cognome = '';
-                nome = '';
+              if (parts.length === 1) {
+                  // Only one word, assume it's the surname.
+                  cognome = parts[0];
+                  nome = '';
+              } else if (parts.length > 1) {
+                  // More than one word, try to split.
+                  // Handle special case where surname is repeated (e.g., "ROSSI ROSSI").
+                  if (parts.length === 2 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
+                      cognome = fullName;
+                      nome = '';
+                  } else {
+                      // Default: last word is the name, rest is the surname.
+                      nome = parts.pop() as string;
+                      cognome = parts.join(' ');
+                  }
               }
-          } else {
-              cognome = getCellValueAsString(row[cognomeIndex] || '');
-              nome = getCellValueAsString(row[nomeIndex] || '');
-              cognomeNome = `${cognome} ${nome}`.trim();
+          } 
+          // Priority 3: If only a 'Cognome' column exists.
+          else if (cognomeIndex !== -1) {
+              cognome = getCellValueAsString(row[cognomeIndex]);
+              nome = '';
+              cognomeNome = cognome;
           }
 
           const matricola: string = matricolaIndex !== -1 ? getCellValueAsString(row[matricolaIndex]) : '';
