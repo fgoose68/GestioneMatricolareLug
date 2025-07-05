@@ -90,6 +90,7 @@ function Dashboard() {
 
       const dataRows = jsonData.slice(headerRowIndex + 1);
       const findIndex = (keywords: string[]) => headers.findIndex(h => keywords.some(kw => h.includes(kw)));
+      
       const matricolaIndex = findIndex(['matricola']);
       const gradoIndex = findIndex(['grado']);
       const categoriaIndex = findIndex(['cat.', 'cat', 'categoria']);
@@ -99,42 +100,46 @@ function Dashboard() {
 
       const mappedData = dataRows.map((row, rowIndex) => {
         if (row.every(cell => !getCellValueAsString(cell))) return null;
-        let cognomeNome = '', cognome = '', nome = '';
+        
+        let cognome = '';
+        let nome = '';
 
-        // 1. Prioritize combined name column
-        if (cognomeNomeIndex !== -1 && getCellValueAsString(row[cognomeNomeIndex])) {
-          cognomeNome = getCellValueAsString(row[cognomeNomeIndex]);
-          const parts = cognomeNome.split(' ').filter(p => p);
-          if (parts.length > 1) {
-            nome = parts.pop() as string;
-            cognome = parts.join(' ');
-          } else {
-            cognome = cognomeNome;
-          }
+        // Priority 1: Use separate, distinct columns for "Cognome" and "Nome".
+        // This is the most reliable method and is checked first.
+        // The `cognomeIndex !== nomeIndex` check is crucial to avoid matching the same "Cognome e Nome" column twice.
+        if (cognomeIndex !== -1 && nomeIndex !== -1 && cognomeIndex !== nomeIndex) {
+            cognome = getCellValueAsString(row[cognomeIndex]);
+            nome = getCellValueAsString(row[nomeIndex]);
         } 
-        // 2. Look for separate columns if combined not found
-        else if (cognomeIndex !== -1 && nomeIndex !== -1) {
-          cognome = getCellValueAsString(row[cognomeIndex]);
-          nome = getCellValueAsString(row[nomeIndex]);
-          cognomeNome = `${cognome} ${nome}`.trim();
-        } 
-        // 3. Fallback for "Cognome" column that might contain the full name
+        // Priority 2: If separate columns aren't found, look for a single combined column.
+        else if (cognomeNomeIndex !== -1) {
+            const fullName = getCellValueAsString(row[cognomeNomeIndex]);
+            const parts = fullName.split(' ').filter(p => p);
+            if (parts.length > 1) {
+                nome = parts.pop() as string;
+                cognome = parts.join(' ');
+            } else {
+                cognome = fullName;
+            }
+        }
+        // Priority 3: As a fallback, if only a "cognome" column was found, assume it might contain the full name.
         else if (cognomeIndex !== -1) {
-          const fullName = getCellValueAsString(row[cognomeIndex]);
-          const parts = fullName.split(' ').filter(p => p);
-          if (parts.length > 1) {
-            nome = parts.pop() as string;
-            cognome = parts.join(' ');
-            cognomeNome = `${cognome} ${nome}`.trim();
-          } else {
-            cognome = fullName;
-            cognomeNome = fullName;
-          }
+            const fullName = getCellValueAsString(row[cognomeIndex]);
+            const parts = fullName.split(' ').filter(p => p);
+            if (parts.length > 1) {
+                nome = parts.pop() as string;
+                cognome = parts.join(' ');
+            } else {
+                cognome = fullName;
+            }
         }
 
+        const cognomeNome = `${cognome} ${nome}`.trim();
         const matricola = getCellValueAsString(row[matricolaIndex]);
         const grado = getCellValueAsString(row[gradoIndex]);
+
         if (!matricola || !grado || !cognomeNome) return null;
+        
         return {
           Matricola: matricola,
           "Grado militare": grado,
@@ -147,8 +152,7 @@ function Dashboard() {
       }).filter(Boolean) as (Discente & { originalRow: number })[];
 
       if (mappedData.some(d => !d.Nome && !d.Cognome.includes(' '))) {
-        showError("Errore: Il campo Nome è vuoto o non è stato possibile estrarlo per alcuni discenti. Controlla le colonne 'Cognome' e 'Nome' nel file Excel.");
-        return;
+        showError("Avviso: Il campo Nome è vuoto per alcuni discenti. Controlla le colonne 'Cognome' e 'Nome' nel file Excel.");
       }
       setDiscenti(mappedData);
       showSuccess(`Caricamento completato. Trovati ${mappedData.length} discenti.`);
