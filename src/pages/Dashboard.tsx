@@ -38,17 +38,6 @@ function Dashboard() {
   const [signer, setSigner] = useState<string>("Il Direttore del Corso");
   const [courseInfo, setCourseInfo] = useState<CourseInfo | null>(null);
 
-  const getCellStringValue = (row: any[], index: number): string => {
-    if (index === -1) {
-      return "";
-    }
-    const value = row[index];
-    if (value === null || value === undefined) {
-      return "";
-    }
-    return String(value).trim();
-  };
-
   const handleExcelUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -86,11 +75,11 @@ function Dashboard() {
         if (missingCourseFields.length > 0) {
           showError(`Dati corso mancanti o non validi: ${missingCourseFields.join(", ")}. Controlla il formato del file.`);
           setCourseInfo(null);
-          return; // Stop processing if essential course info is missing
+          return;
         }
 
         const period = `dal ${startDate} al ${endDate}`;
-        const today = format(new Date(), "dd/MM/yyyy"); // Data odierna
+        const today = format(new Date(), "dd/MM/yyyy");
         setCourseInfo({ title, location, period, currentDate: today });
         showSuccess(`Dati corso estratti: ${title}, ${location}, ${period}`);
 
@@ -98,24 +87,43 @@ function Dashboard() {
         const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, {
           header: 1,
           defval: "",
-          blankrows: false,
+          blankrows: true,
         });
 
-        // Imposta la riga delle intestazioni alla riga 7 (indice 6 in un array 0-based) come richiesto.
-        const headerRowIndex = 6; 
+        // Rileva automaticamente la riga delle intestazioni per renderlo più robusto
+        let headerRowIndex = -1;
+        let headers: string[] = [];
+        const searchLimit = Math.min(jsonData.length, 20); 
 
-        if (jsonData.length <= headerRowIndex) {
-            showError("Il file Excel non contiene abbastanza righe per trovare le intestazioni alla riga 7. Assicurati che la riga 7 contenga le intestazioni.");
-            return;
+        for (let i = 0; i < searchLimit; i++) {
+            const potentialHeaders = jsonData[i].filter(h => h !== null && h !== undefined && String(h).trim() !== '');
+            if (potentialHeaders.length < 3) {
+                continue;
+            }
+
+            const rowAsHeaders = jsonData[i].map(h => String(h || '').toLowerCase().trim());
+            
+            const hasMatricola = rowAsHeaders.some(h => h.includes('matricola'));
+            const hasGrado = rowAsHeaders.some(h => h.includes('grado'));
+            const hasName = rowAsHeaders.some(h => h.includes('cognome') || h.includes('nominativo'));
+
+            if ((hasMatricola && hasGrado) || (hasMatricola && hasName) || (hasGrado && hasName)) {
+                headerRowIndex = i;
+                headers = rowAsHeaders;
+                console.log(`DEBUG: Trovata riga intestazioni all'indice ${i} (riga ${i + 1} in Excel).`);
+                break;
+            }
         }
 
-        const headers = jsonData[headerRowIndex].map(h => String(h).toLowerCase().trim());
-        console.log("DEBUG: Headers from row 7:", headers);
+        if (headerRowIndex === -1) {
+            showError("Impossibile trovare la riga delle intestazioni nel file Excel. Assicurati che contenga colonne come 'Matricola', 'Grado' e 'Cognome'.");
+            return;
+        }
 
         const dataRows = jsonData.slice(headerRowIndex + 1);
 
         if (dataRows.length === 0) {
-          showError("Nessun discente trovato dopo la riga delle intestazioni (riga 7). Controlla che il file Excel contenga dati validi.");
+          showError("Nessun discente trovato dopo la riga delle intestazioni. Controlla che il file Excel contenga dati validi.");
           return;
         }
 
@@ -129,7 +137,6 @@ function Dashboard() {
         const nomeIndex = findIndex(['nome']);
         const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo']);
 
-        // Validate essential headers
         const essentialHeadersPresent = 
             (matricolaIndex !== -1) && 
             (gradoIndex !== -1) && 
@@ -140,7 +147,7 @@ function Dashboard() {
             if (matricolaIndex === -1) missing.push("'Matricola'");
             if (gradoIndex === -1) missing.push("'Grado'");
             if (cognomeIndex === -1 && nomeIndex === -1 && cognomeNomeIndex === -1) missing.push("almeno una colonna per 'Cognome' e 'Nome' (separate o combinate)");
-            showError(`Intestazioni essenziali mancanti alla riga 7. Assicurati che il file Excel contenga le colonne: ${missing.join(', ')}.`);
+            showError(`Intestazioni essenziali mancanti o non riconosciute. Assicurati che il file Excel contenga le colonne: ${missing.join(', ')}.`);
             return;
         }
 
@@ -197,9 +204,9 @@ function Dashboard() {
               }
           }
 
-          const matricola = getCellStringValue(row, matricolaIndex);
-          const grado = getCellStringValue(row, gradoIndex);
-          const categoria = getCellStringValue(row, categoriaIndex);
+          const matricola = matricolaIndex !== -1 ? String(row[matricolaIndex] ?? '').trim() : '';
+          const grado = gradoIndex !== -1 ? String(row[gradoIndex] ?? '').trim() : '';
+          const categoria = categoriaIndex !== -1 ? String(row[categoriaIndex] ?? '').trim() : '';
 
           if (!matricola || !grado || !cognomeNome) {
             const missingFields = [];
