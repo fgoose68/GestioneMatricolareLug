@@ -38,6 +38,17 @@ function Dashboard() {
   const [signer, setSigner] = useState<string>("Il Direttore del Corso");
   const [courseInfo, setCourseInfo] = useState<CourseInfo | null>(null);
 
+  const getCellStringValue = (row: any[], index: number): string => {
+    if (index === -1) {
+      return "";
+    }
+    const value = row[index];
+    if (value === null || value === undefined) {
+      return "";
+    }
+    return String(value).trim();
+  };
+
   const handleExcelUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -90,7 +101,7 @@ function Dashboard() {
           blankrows: false,
         });
 
-        // Imposta la riga delle intestazioni alla riga 7 (indice 6 in un array 0-based)
+        // Imposta la riga delle intestazioni alla riga 7 (indice 6 in un array 0-based) come richiesto.
         const headerRowIndex = 6; 
 
         if (jsonData.length <= headerRowIndex) {
@@ -99,12 +110,12 @@ function Dashboard() {
         }
 
         const headers = jsonData[headerRowIndex].map(h => String(h).toLowerCase().trim());
-        console.log("DEBUG: Extracted Headers:", headers); // Add logging for headers
+        console.log("DEBUG: Headers from row 7:", headers);
 
         const dataRows = jsonData.slice(headerRowIndex + 1);
 
         if (dataRows.length === 0) {
-          showError("Nessun discente trovato dopo la riga delle intestazioni. Controlla che il file Excel contenga dati validi.");
+          showError("Nessun discente trovato dopo la riga delle intestazioni (riga 7). Controlla che il file Excel contenga dati validi.");
           return;
         }
 
@@ -114,9 +125,9 @@ function Dashboard() {
         const gradoIndex = findIndex(['grado']);
         const categoriaIndex = findIndex(['cat.', 'cat', 'categoria']);
         
-        const cognomeIndex = findIndex(['cognome']); // Check for separate cognome first
-        const nomeIndex = findIndex(['nome']);       // Check for separate nome first
-        const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo']); // Combined name last
+        const cognomeIndex = findIndex(['cognome']);
+        const nomeIndex = findIndex(['nome']);
+        const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo']);
 
         // Validate essential headers
         const essentialHeadersPresent = 
@@ -129,17 +140,14 @@ function Dashboard() {
             if (matricolaIndex === -1) missing.push("'Matricola'");
             if (gradoIndex === -1) missing.push("'Grado'");
             if (cognomeIndex === -1 && nomeIndex === -1 && cognomeNomeIndex === -1) missing.push("almeno una colonna per 'Cognome' e 'Nome' (separate o combinate)");
-            showError(`Intestazioni essenziali mancanti. Assicurati che il file Excel contenga le colonne: ${missing.join(', ')} alla riga 7.`);
+            showError(`Intestazioni essenziali mancanti alla riga 7. Assicurati che il file Excel contenga le colonne: ${missing.join(', ')}.`);
             return;
         }
-
 
         const valueExists = (val: any) => val !== null && val !== undefined && String(val).trim() !== '';
 
         const discentiData = dataRows.map((row, rowIndex) => {
-          // Salta righe completamente vuote
           if (row.every(cell => !valueExists(cell))) {
-            console.log(`DEBUG: Skipping empty row at index ${rowIndex}`);
             return null; 
           }
 
@@ -147,109 +155,60 @@ function Dashboard() {
           let cognome: string = '';
           let nome: string = '';
 
-          // Priority 1: Separate Cognome and Nome columns
           if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
               cognome = String(row[cognomeIndex]).trim();
               nome = String(row[nomeIndex]).trim();
               cognomeNome = `${cognome} ${nome}`.trim();
-              console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Usando colonne separate. Cognome: '${cognome}', Nome: '${nome}'`);
           } 
-          // Priority 2: Combined "Cognome e Nome" or "Nominativo" column
           else if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
               const fullName = String(row[cognomeNomeIndex]).trim();
-              cognomeNome = fullName; // This will be the full string for the template
-
+              cognomeNome = fullName;
               const parts = fullName.split(' ').filter(p => p.length > 0);
-
-              if (parts.length === 0) {
-                  cognome = '';
-                  nome = '';
-                  console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato vuoto. Cognome: '${cognome}', Nome: '${nome}'`);
-              } else if (parts.length === 1) {
-                  // If only one word, assume it's the surname and name is empty
+              if (parts.length === 1) {
                   cognome = parts[0];
                   nome = '';
-                  console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato singola parola. Cognome: '${cognome}', Nome: '${nome}'`);
-              } else {
+              } else if (parts.length > 1) {
                   const allPartsAreUppercase = parts.every(part => part.toUpperCase() === part);
-
                   if (!allPartsAreUppercase) {
-                      // Case: "ROSSI Mario" or "De Rossi Mario" (mixed case)
-                      // Find the first part that is not all uppercase, assume it's the start of the name.
                       let nameStartIndex = -1;
                       for (let i = 0; i < parts.length; i++) {
-                          if (parts[i].toUpperCase() !== parts[i]) { // Found a non-uppercase part
+                          if (parts[i].toUpperCase() !== parts[i]) {
                               nameStartIndex = i;
                               break;
                           }
                       }
-
                       if (nameStartIndex !== -1) {
                           cognome = parts.slice(0, nameStartIndex).join(' ');
                           nome = parts.slice(nameStartIndex).join(' ');
-                          console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato misto. Cognome: '${cognome}', Nome: '${nome}'`);
                       } else {
-                          // Fallback: if no non-uppercase part found but not all parts are uppercase,
-                          // this case should ideally not be hit. Treat as full name as surname.
                           cognome = fullName;
                           nome = '';
-                          console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato misto fallback. Cognome: '${cognome}', Nome: '${nome}'`);
                       }
                   } else {
-                      // All parts are uppercase (e.g., "IMPERIALE FABRIZIO", "DE ROSSI", "ROSSI ROSSI")
-                      // Heuristic: If the first two parts are identical (e.g., "ROSSI ROSSI"), assume it's a single surname.
                       if (parts.length >= 2 && parts[0].toUpperCase() === parts[1].toUpperCase()) {
                           cognome = parts[0]; 
-                          nome = parts[1]; // Modifica: Assegna la seconda parte come nome
-                          console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato tutto maiuscolo, cognome ripetuto. Cognome: '${cognome}', Nome: '${nome}'`);
-                      } else if (parts.length > 1) {
-                          // Assume the last word is the name, and the rest is the surname.
-                          // This handles "IMPERIALE FABRIZIO" -> cognome="IMPERIALE", nome="FABRIZIO"
-                          // NOTE: This heuristic might split multi-word surnames like "DE ROSSI" into "DE" (cognome) and "ROSSI" (nome).
-                          // It's a trade-off to correctly handle "IMPERIALE FABRIZIO" where FABRIZIO is the name.
+                          nome = parts[1];
+                      } else {
                           const lastPart = parts[parts.length - 1]; 
                           cognome = parts.slice(0, parts.length - 1).join(' ');
                           nome = lastPart;
-                          console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato tutto maiuscolo, diviso. Cognome: '${cognome}', Nome: '${nome}'`);
-                      } else {
-                          // Should be caught by parts.length === 1, but as a safeguard
-                          cognome = fullName;
-                          nome = '';
-                          console.log(`DEBUG (Riga ${headerRowIndex + rowIndex + 2}): Campo combinato tutto maiuscolo, singola parte fallback. Cognome: '${cognome}', Nome: '${nome}'`);
                       }
                   }
               }
-          } else {
-              // If no valid name columns found, set to empty to avoid undefined in table
-              console.warn(`Riga ${headerRowIndex + rowIndex + 2} del file Excel: Nessun dato valido per Cognome e Nome. Dati riga:`, row);
-              cognome = '';
-              nome = '';
-              cognomeNome = '';
           }
 
-          const matricola: string = matricolaIndex !== -1 && valueExists(row[matricolaIndex]) ? String(row[matricolaIndex] as string | number) : "";
-          const grado: string = gradoIndex !== -1 && valueExists(row[gradoIndex]) ? String(row[gradoIndex] as string | number) : "";
-          const categoria: string = categoriaIndex !== -1 && valueExists(row[categoriaIndex]) ? String(row[categoriaIndex] as string | number) : "";
+          const matricola = getCellStringValue(row, matricolaIndex);
+          const grado = getCellStringValue(row, gradoIndex);
+          const categoria = getCellStringValue(row, categoriaIndex);
 
-          // Controllo rigoroso per dati essenziali
-          if (!valueExists(matricola) || !valueExists(grado) || !valueExists(cognomeNome)) {
+          if (!matricola || !grado || !cognomeNome) {
             const missingFields = [];
-            if (!valueExists(matricola)) missingFields.push("Matricola");
-            if (!valueExists(grado)) missingFields.push("Grado militare");
-            if (!valueExists(cognomeNome)) missingFields.push("Cognome e Nome del Discente (o Cognome/Nome separati)");
-            console.warn(`Riga ${headerRowIndex + rowIndex + 2} del file Excel saltata perché mancano dati essenziali: ${missingFields.join(', ')}. Dati letti:`, { matricola, grado, cognomeNome, cognome, nome, categoria });
+            if (!matricola) missingFields.push("Matricola");
+            if (!grado) missingFields.push("Grado militare");
+            if (!cognomeNome) missingFields.push("Cognome e Nome");
+            console.warn(`Riga ${headerRowIndex + rowIndex + 2} del file Excel saltata perché mancano dati essenziali: ${missingFields.join(', ')}.`);
             return null;
           }
-
-          // Logging dettagliato per debug
-          console.log(`Riga ${headerRowIndex + rowIndex + 2} - Estratto finale:`, {
-            Matricola: matricola,
-            Grado_militare: grado,
-            "Cognome e Nome del Discente": cognomeNome,
-            Cognome: cognome,
-            Nome: nome,
-            Categoria: categoria,
-          });
 
           return {
             "Matricola": matricola,
@@ -263,15 +222,14 @@ function Dashboard() {
 
 
         if (discentiData.length === 0) {
-          showError("Nessun discente valido caricato. Controlla che le intestazioni e i dati siano corretti e completi.");
+          showError("Nessun discente valido caricato. Controlla che i dati siano corretti e completi.");
         } else {
           setDiscenti(discentiData);
           showSuccess(`Caricamento completato. Trovati ${discentiData.length} discenti.`);
         }
       } catch (error) {
         console.error("Errore imprevisto durante la lettura del file Excel:", error);
-        // More specific error message for XLSX parsing issues
-        showError("Errore durante l'elaborazione del file Excel. Assicurati che sia un file .xlsx valido e non corrotto, e che la struttura dei dati sia come previsto.");
+        showError("Errore durante l'elaborazione del file Excel. Assicurati che sia un file .xlsx valido e non corrotto.");
         setDiscenti([]);
         setCourseInfo(null);
       }
@@ -319,7 +277,7 @@ function Dashboard() {
             cognome: discente.Cognome,
             nome: discente.Nome,
             matricola: discente.Matricola,
-            datafirma: courseInfo.currentDate, // Passa la data odierna al template
+            datafirma: courseInfo.currentDate,
           });
 
           doc.render();
