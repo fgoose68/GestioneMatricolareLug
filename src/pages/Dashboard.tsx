@@ -55,16 +55,21 @@ function Dashboard() {
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
 
+        // Helper function to safely get cell value as string
+        const getCellValueAsString = (cellValue: any): string => {
+          return cellValue !== null && cellValue !== undefined ? String(cellValue).trim() : '';
+        };
+
         // Estrazione dati corso dalle celle originali (A5, C6, D6, E6)
         const titleCell = worksheet['A5'];
         const locationCell = worksheet['C6'];
         const startDateCell = worksheet['D6'];
         const endDateCell = worksheet['E6'];
 
-        const title = titleCell ? String(titleCell.v) : "";
-        const location = locationCell ? String(locationCell.v) : "";
-        const startDate = startDateCell?.v ? (startDateCell.v instanceof Date ? format(startDateCell.v, "dd/MM/yyyy") : String(startDateCell.v)) : "";
-        const endDate = endDateCell?.v ? (endDateCell.v instanceof Date ? format(endDateCell.v, "dd/MM/yyyy") : String(endDateCell.v)) : "";
+        const title = getCellValueAsString(titleCell?.v);
+        const location = getCellValueAsString(locationCell?.v);
+        const startDate = startDateCell?.v ? (startDateCell.v instanceof Date ? format(startDateCell.v, "dd/MM/yyyy") : getCellValueAsString(startDateCell.v)) : "";
+        const endDate = endDateCell?.v ? (endDateCell.v instanceof Date ? format(endDateCell.v, "dd/MM/yyyy") : getCellValueAsString(endDateCell.v)) : "";
 
         const missingCourseFields: string[] = [];
         if (!title) missingCourseFields.push("Titolo (A5)");
@@ -101,7 +106,7 @@ function Dashboard() {
                 continue;
             }
 
-            const rowAsHeaders = jsonData[i].map(h => String(h || '').toLowerCase().trim());
+            const rowAsHeaders = jsonData[i].map(h => getCellValueAsString(h).toLowerCase());
             
             const hasMatricola = rowAsHeaders.some(h => h.includes('matricola'));
             const hasGrado = rowAsHeaders.some(h => h.includes('grado'));
@@ -163,13 +168,13 @@ function Dashboard() {
 
           if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
               // Priority 1: Use separate Cognome and Nome columns if available
-              cognome = String(row[cognomeIndex]).trim();
-              nome = String(row[nomeIndex]).trim();
+              cognome = getCellValueAsString(row[cognomeIndex]);
+              nome = getCellValueAsString(row[nomeIndex]);
               cognomeNome = `${cognome} ${nome}`.trim();
           } 
           else if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
               // Priority 2: Process combined "Cognome e Nome" or "Nominativo" column
-              const fullName = String(row[cognomeNomeIndex]).trim();
+              const fullName = getCellValueAsString(row[cognomeNomeIndex]);
               cognomeNome = fullName;
               const parts = fullName.split(' ').filter(p => p.length > 0);
 
@@ -221,9 +226,9 @@ function Dashboard() {
               cognomeNome = '';
           }
 
-          const matricola: string = String(row[matricolaIndex] ?? '').trim();
-          const grado: string = String(row[gradoIndex] ?? '').trim();
-          const categoria: string = String(row[categoriaIndex] ?? '').trim();
+          const matricola: string = matricolaIndex !== -1 ? getCellValueAsString(row[matricolaIndex]) : '';
+          const grado: string = gradoIndex !== -1 ? getCellValueAsString(row[gradoIndex]) : '';
+          const categoria: string = categoriaIndex !== -1 ? getCellValueAsString(row[categoriaIndex]) : '';
 
           if (!matricola || !grado || !cognomeNome) {
             const missingFields = [];
@@ -340,7 +345,10 @@ function Dashboard() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
+    <div className="container mx-auto p-4 md:p-8 relative"> {/* Added relative for positioning */}
+      <div className="absolute top-4 right-4 text-sm text-muted-foreground">
+        Ver.5.1Lug25
+      </div>
       <header className="text-center mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard Stampa Unione</h1>
         <p className="text-muted-foreground">
