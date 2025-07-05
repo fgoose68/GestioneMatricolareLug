@@ -182,7 +182,7 @@ function Dashboard() {
         const gradoMilitare = discente["Grado militare"].toUpperCase();
 
         if (gradoMilitare.includes("CAP") || gradoMilitare.includes("TEN")) {
-          categoriaPerTemplate = "L'Ufficiale";
+          categoriaPerTemplate = "l'Ufficiale";
         } else if (gradoMilitare.includes("MAR")) {
           categoriaPerTemplate = "l'Ispettore";
         }
