@@ -95,16 +95,14 @@ function Dashboard() {
       const categoriaIndex = findIndex(['cat.', 'cat', 'categoria']);
       const cognomeIndex = findIndex(['cognome']);
       const nomeIndex = findIndex(['nome']);
-      const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo']);
+      const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo', 'cognome nome']);
 
       const mappedData = dataRows.map((row, rowIndex) => {
         if (row.every(cell => !getCellValueAsString(cell))) return null;
         let cognomeNome = '', cognome = '', nome = '';
-        if (cognomeIndex !== -1 && nomeIndex !== -1 && getCellValueAsString(row[cognomeIndex])) {
-          cognome = getCellValueAsString(row[cognomeIndex]);
-          nome = getCellValueAsString(row[nomeIndex]);
-          cognomeNome = `${cognome} ${nome}`.trim();
-        } else if (cognomeNomeIndex !== -1 && getCellValueAsString(row[cognomeNomeIndex])) {
+
+        // 1. Prioritize combined name column
+        if (cognomeNomeIndex !== -1 && getCellValueAsString(row[cognomeNomeIndex])) {
           cognomeNome = getCellValueAsString(row[cognomeNomeIndex]);
           const parts = cognomeNome.split(' ').filter(p => p);
           if (parts.length > 1) {
@@ -113,10 +111,27 @@ function Dashboard() {
           } else {
             cognome = cognomeNome;
           }
-        } else if (cognomeIndex !== -1) {
+        } 
+        // 2. Look for separate columns if combined not found
+        else if (cognomeIndex !== -1 && nomeIndex !== -1) {
           cognome = getCellValueAsString(row[cognomeIndex]);
-          cognomeNome = cognome;
+          nome = getCellValueAsString(row[nomeIndex]);
+          cognomeNome = `${cognome} ${nome}`.trim();
+        } 
+        // 3. Fallback for "Cognome" column that might contain the full name
+        else if (cognomeIndex !== -1) {
+          const fullName = getCellValueAsString(row[cognomeIndex]);
+          const parts = fullName.split(' ').filter(p => p);
+          if (parts.length > 1) {
+            nome = parts.pop() as string;
+            cognome = parts.join(' ');
+            cognomeNome = `${cognome} ${nome}`.trim();
+          } else {
+            cognome = fullName;
+            cognomeNome = fullName;
+          }
         }
+
         const matricola = getCellValueAsString(row[matricolaIndex]);
         const grado = getCellValueAsString(row[gradoIndex]);
         if (!matricola || !grado || !cognomeNome) return null;
@@ -131,8 +146,8 @@ function Dashboard() {
         };
       }).filter(Boolean) as (Discente & { originalRow: number })[];
 
-      if (mappedData.some(d => !d.Nome)) {
-        showError("Errore: Il campo Nome è vuoto o non è stato possibile estrarlo per alcuni discenti. Caricamento interrotto.");
+      if (mappedData.some(d => !d.Nome && !d.Cognome.includes(' '))) {
+        showError("Errore: Il campo Nome è vuoto o non è stato possibile estrarlo per alcuni discenti. Controlla le colonne 'Cognome' e 'Nome' nel file Excel.");
         return;
       }
       setDiscenti(mappedData);
