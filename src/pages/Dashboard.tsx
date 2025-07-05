@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { FileText, Download, Eye, Info, Printer } from "lucide-react";
+import { Download, Info } from "lucide-react";
 import { format } from "date-fns";
-import { showError, showSuccess, showLoading, dismissToast, showWarning } from "@/utils/toast";
+import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Step } from "@/components/Step";
@@ -16,7 +16,6 @@ import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
-import * as mammoth from "mammoth";
 
 const getCellValueAsString = (cellValue: any): string => {
   return cellValue !== null && cellValue !== undefined ? String(cellValue).trim() : '';
@@ -194,79 +193,6 @@ function Dashboard() {
     }
   };
 
-  const handlePrint = async () => {
-    if (!wordFile || discenti.length === 0 || !courseInfo) {
-      showError("Carica il file Excel e il template Word prima di stampare.");
-      return;
-    }
-    const toastId = showLoading("Preparazione dei documenti per la stampa...");
-
-    try {
-      const content = await wordFile.arrayBuffer();
-      const htmlParts: string[] = [];
-
-      for (const discente of discenti) {
-        const templateZip = new PizZip(content);
-        const doc = new Docxtemplater(templateZip, { paragraphLoop: true, linebreaks: true });
-        doc.setData({
-          titolocorso: courseInfo.title,
-          categoria: discente.Categoria,
-          localita: courseInfo.location,
-          periodo_corso: courseInfo.period,
-          firmatario: `${signer}\nCol. Massimiliano Fortino`,
-          grado: discente["Grado militare"],
-          cognome_nome: discente["Cognome e Nome del Discente"],
-          cognome: discente.Cognome,
-          nome: discente.Nome,
-          matricola: discente.Matricola,
-          datafirma: courseInfo.currentDate,
-        });
-        doc.render();
-        
-        const docxBlob = doc.getZip().generate({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-        const docxArrayBuffer = await docxBlob.arrayBuffer();
-
-        const result = await mammoth.convert({ arrayBuffer: docxArrayBuffer });
-        htmlParts.push(result.value);
-      }
-
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        const combinedHtml = htmlParts.join('<div style="page-break-after: always;"></div>');
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Stampa Documenti</title>
-              <style>
-                body { font-family: sans-serif; }
-                @media print {
-                  div { page-break-after: always; }
-                }
-              </style>
-            </head>
-            <body>
-              ${combinedHtml}
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.focus();
-        setTimeout(() => {
-          printWindow.print();
-        }, 500);
-        dismissToast(toastId);
-        showSuccess("Documenti pronti per la stampa!");
-      } else {
-        dismissToast(toastId);
-        showError("Impossibile aprire la finestra di stampa. Controlla le impostazioni del popup blocker del tuo browser.");
-      }
-    } catch (error: any) {
-      dismissToast(toastId);
-      console.error("Errore durante la preparazione per la stampa:", error);
-      showError(`Errore durante la preparazione per la stampa: ${error.message}`);
-    }
-  };
-
   return (
     <div className="container mx-auto p-4 h-screen flex flex-col">
       <header className="text-center mb-6">
@@ -341,9 +267,6 @@ function Dashboard() {
             <div className="mt-auto pt-6 flex gap-4">
               <Button size="lg" onClick={handleGenerateDocument} className="w-full" disabled={!wordFile || discenti.length === 0}>
                 <Download className="mr-2 h-5 w-5" /> Genera DOCX e ZIP
-              </Button>
-              <Button size="lg" variant="outline" onClick={handlePrint} className="w-full" disabled={!wordFile || discenti.length === 0}>
-                <Printer className="mr-2 h-5 w-5" /> Stampa
               </Button>
             </div>
           </div>
