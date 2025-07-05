@@ -275,7 +275,7 @@ function Dashboard() {
             )}
             <div className="mt-auto pt-6 flex gap-4">
               <Button size="lg" onClick={handleGenerateDocument} className="w-full" disabled={!wordFile || discenti.length === 0}>
-                <Download className="mr-2 h-5 w-5" /> Genera DOCX e ZIP
+                <Download className="mr-2 h-5 w-5" /> Genera Modelli L
               </Button>
             </div>
           </div>
