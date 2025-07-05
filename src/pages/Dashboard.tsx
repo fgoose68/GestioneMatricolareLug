@@ -15,6 +15,11 @@ import PizZip from "pizzip";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
 
+// Helper function to safely get cell value as string
+const getCellValueAsString = (cellValue: any): string => {
+  return cellValue !== null && cellValue !== undefined ? String(cellValue).trim() : '';
+};
+
 interface Discente {
   Matricola: string;
   "Grado militare": string;
@@ -54,11 +59,6 @@ function Dashboard() {
         const workbook = XLSX.read(data, { type: "array", cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-
-        // Helper function to safely get cell value as string
-        const getCellValueAsString = (cellValue: any): string => {
-          return cellValue !== null && cellValue !== undefined ? String(cellValue).trim() : '';
-        };
 
         // Estrazione dati corso dalle celle originali (A5, C6, D6, E6)
         const titleCell = worksheet['A5'];
@@ -355,7 +355,7 @@ function Dashboard() {
 
       <div className="grid gap-8 md:grid-cols-2">
         <Card className="md:col-span-2">
-          <CardHeader className="flex justify-between items-center"> {/* Added flex and justify-between */}
+          <CardHeader className="flex justify-between items-center">
             <CardTitle className="flex items-center gap-2"><FileUp size={20} /> 1. Caricamento File</CardTitle>
             <div className="text-sm text-muted-foreground">
               Ver.5.1Lug25
@@ -396,7 +396,7 @@ function Dashboard() {
         )}
 
         <Card className="md:col-span-2">
-          <CardHeader>
+          <CardHeader className="flex justify-center items-center">
             <CardTitle className="flex items-center gap-2"><FileText size={20} /> 2. Firmatario</CardTitle>
           </CardHeader>
           <CardContent>
