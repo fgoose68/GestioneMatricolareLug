@@ -157,7 +157,7 @@ function Dashboard() {
 
         const valueExists = (val: any) => val !== null && val !== undefined && String(val).trim() !== '';
 
-        const discentiData = dataRows.map((row, rowIndex) => {
+        const mappedData = dataRows.map((row, rowIndex) => {
           if (row.every(cell => !valueExists(cell))) {
             return null; 
           }
@@ -166,36 +166,30 @@ function Dashboard() {
           let cognome: string = '';
           let nome: string = '';
 
-          if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
-              // Priority 1: Use separate Cognome and Nome columns if available
+          if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex])) {
               cognome = getCellValueAsString(row[cognomeIndex]);
               nome = getCellValueAsString(row[nomeIndex]);
               cognomeNome = `${cognome} ${nome}`.trim();
           } 
           else if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
-              // Priority 2: Process combined "Cognome e Nome" or "Nominativo" column
               const fullName = getCellValueAsString(row[cognomeNomeIndex]);
               cognomeNome = fullName;
               const parts = fullName.split(' ').filter(p => p.length > 0);
 
               if (parts.length > 1) {
-                // If more than one part, assume the last part is the name and the rest is the surname.
                 nome = parts.pop() as string;
                 cognome = parts.join(' ');
               } else if (parts.length === 1) {
-                // If only one part, it's the surname.
                 cognome = parts[0];
                 nome = '';
               } else {
-                // Empty or whitespace only
                 cognome = '';
                 nome = '';
               }
           } else {
-              // If no valid name columns found, set to empty
-              cognome = '';
-              nome = '';
-              cognomeNome = '';
+              cognome = getCellValueAsString(row[cognomeIndex] || '');
+              nome = getCellValueAsString(row[nomeIndex] || '');
+              cognomeNome = `${cognome} ${nome}`.trim();
           }
 
           const matricola: string = matricolaIndex !== -1 ? getCellValueAsString(row[matricolaIndex]) : '';
@@ -203,10 +197,6 @@ function Dashboard() {
           const categoria: string = categoriaIndex !== -1 ? getCellValueAsString(row[categoriaIndex]) : '';
 
           if (!matricola || !grado || !cognomeNome) {
-            const missingFields = [];
-            if (!matricola) missingFields.push("Matricola");
-            if (!grado) missingFields.push("Grado militare");
-            if (!cognomeNome) missingFields.push("Cognome e Nome");
             return null;
           }
 
@@ -217,13 +207,32 @@ function Dashboard() {
             "Cognome": cognome,
             "Nome": nome,
             "Categoria": categoria,
+            "originalRow": headerRowIndex + 2 + rowIndex,
           };
-        }).filter(d => d !== null) as Discente[];
+        }).filter(d => d !== null) as (Discente & { originalRow: number })[];
 
-        const problematicRows = discentiData.filter(d => !d.Nome || d.Nome === d.Cognome);
-        if (problematicRows.length > 0) {
-            showWarning(`Attenzione: per ${problematicRows.length} discenti, il nome è mancante o identico al cognome. Si prega di verificare i dati nell'anteprima.`);
+        const rowsWithEmptyName: number[] = [];
+        const rowsWithIdenticalName: number[] = [];
+
+        for (const discente of mappedData) {
+            if (!discente.Nome) {
+                rowsWithEmptyName.push(discente.originalRow);
+            } else if (discente.Nome.toLowerCase() === discente.Cognome.toLowerCase()) {
+                rowsWithIdenticalName.push(discente.originalRow);
+            }
         }
+
+        if (rowsWithEmptyName.length > 0) {
+            showError(`Errore: Il campo Nome è vuoto o mancante in ${rowsWithEmptyName.length} righe (es. riga ${rowsWithEmptyName[0]}). Caricamento interrotto.`);
+            setDiscenti([]);
+            return;
+        }
+
+        if (rowsWithIdenticalName.length > 0) {
+            showWarning(`Attenzione: Il campo Nome è identico al Cognome in ${rowsWithIdenticalName.length} righe (es. riga ${rowsWithIdenticalName[0]}).`);
+        }
+
+        const discentiData: Discente[] = mappedData.map(({ originalRow, ...rest }) => rest);
 
         if (discentiData.length === 0) {
           showError("Nessun discente valido caricato. Controlla che i dati siano corretti e completi.");
