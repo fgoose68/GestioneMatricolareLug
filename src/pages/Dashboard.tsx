@@ -95,39 +95,19 @@ function Dashboard() {
           blankrows: true,
         });
 
-        // Rileva automaticamente la riga delle intestazioni per renderlo più robusto
-        let headerRowIndex = -1;
-        let headers: string[] = [];
-        const searchLimit = Math.min(jsonData.length, 20); 
-
-        for (let i = 0; i < searchLimit; i++) {
-            const potentialHeaders = jsonData[i].filter(h => h !== null && h !== undefined && String(h).trim() !== '');
-            if (potentialHeaders.length < 3) {
-                continue;
-            }
-
-            const rowAsHeaders = jsonData[i].map(h => getCellValueAsString(h).toLowerCase());
-            
-            const hasMatricola = rowAsHeaders.some(h => h.includes('matricola'));
-            const hasGrado = rowAsHeaders.some(h => h.includes('grado'));
-            const hasName = rowAsHeaders.some(h => h.includes('cognome') || h.includes('nominativo'));
-
-            if ((hasMatricola && hasGrado) || (hasMatricola && hasName) || (hasGrado && hasName)) {
-                headerRowIndex = i;
-                headers = rowAsHeaders;
-                break;
-            }
-        }
-
-        if (headerRowIndex === -1) {
-            showError("Impossibile trovare la riga delle intestazioni nel file Excel. Assicurati che contenga colonne come 'Matricola', 'Grado' e 'Cognome'.");
+        // Le intestazioni sono fissate alla riga 7 (indice 6)
+        const headerRowIndex = 6; 
+        if (jsonData.length <= headerRowIndex) {
+            showError("Il file Excel non ha abbastanza righe. La riga delle intestazioni (riga 7) non è stata trovata.");
             return;
         }
+        const headers = jsonData[headerRowIndex].map(h => getCellValueAsString(h).toLowerCase());
 
+        // I dati dei discenti partono dalla riga 8 (indice 7)
         const dataRows = jsonData.slice(headerRowIndex + 1);
 
         if (dataRows.length === 0) {
-          showError("Nessun discente trovato dopo la riga delle intestazioni. Controlla che il file Excel contenga dati validi.");
+          showError("Nessun discente trovato dopo la riga 7. Controlla che il file Excel contenga dati validi a partire dalla riga 8.");
           return;
         }
 
@@ -151,7 +131,7 @@ function Dashboard() {
             if (matricolaIndex === -1) missing.push("'Matricola'");
             if (gradoIndex === -1) missing.push("'Grado'");
             if (cognomeIndex === -1 && nomeIndex === -1 && cognomeNomeIndex === -1) missing.push("almeno una colonna per 'Cognome' e 'Nome' (separate o combinate)");
-            showError(`Intestazioni essenziali mancanti o non riconosciute. Assicurati che il file Excel contenga le colonne: ${missing.join(', ')}.`);
+            showError(`Intestazioni essenziali mancanti o non riconosciute nella riga 7. Assicurati che il file Excel contenga le colonne: ${missing.join(', ')}.`);
             return;
         }
 
@@ -362,7 +342,7 @@ function Dashboard() {
               <Input id="excel-file" type="file" accept=".xlsx" onChange={handleExcelUpload} />
               {excelFile && <p className="text-sm text-muted-foreground">Caricato: {excelFile.name}</p>}
               <p className="text-xs text-muted-foreground pt-2">
-                Titolo da A5, Sede da C6, Periodo da D6/E6. Le intestazioni dei discenti verranno trovate automaticamente.
+                Titolo da A5, Sede da C6, Periodo da D6/E6. Intestazioni dei discenti dalla riga 7.
               </p>
             </div>
             <div className="space-y-2">
