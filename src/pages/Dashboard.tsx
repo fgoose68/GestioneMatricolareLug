@@ -345,10 +345,7 @@ function Dashboard() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-8 relative"> {/* Added relative for positioning */}
-      <div className="absolute top-4 right-4 text-sm text-muted-foreground">
-        Ver.5.1Lug25
-      </div>
+    <div className="container mx-auto p-4 md:p-8">
       <header className="text-center mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard Stampa Unione</h1>
         <p className="text-muted-foreground">
@@ -358,8 +355,11 @@ function Dashboard() {
 
       <div className="grid gap-8 md:grid-cols-2">
         <Card className="md:col-span-2">
-          <CardHeader>
+          <CardHeader className="flex justify-between items-center"> {/* Added flex and justify-between */}
             <CardTitle className="flex items-center gap-2"><FileUp size={20} /> 1. Caricamento File</CardTitle>
+            <div className="text-sm text-muted-foreground">
+              Ver.5.1Lug25
+            </div>
           </CardHeader>
           <CardContent className="grid md:grid-cols-2 gap-6">
             <div className="space-y-2">
