@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FileUp, FileText, Download, Eye, Info } from "lucide-react";
 import { format } from "date-fns";
-import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
+import { showError, showSuccess, showLoading, dismissToast, showWarning } from "@/utils/toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import * as XLSX from "xlsx";
@@ -251,6 +251,10 @@ function Dashboard() {
           };
         }).filter(d => d !== null) as Discente[];
 
+        const problematicRows = discentiData.filter(d => !d.Nome || d.Nome === d.Cognome);
+        if (problematicRows.length > 0) {
+            showWarning(`Attenzione: per ${problematicRows.length} discenti, il nome è mancante o identico al cognome. Si prega di verificare i dati nell'anteprima.`);
+        }
 
         if (discentiData.length === 0) {
           showError("Nessun discente valido caricato. Controlla che i dati siano corretti e completi.");
