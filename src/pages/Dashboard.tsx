@@ -121,16 +121,18 @@ function Dashboard() {
         const nomeIndex = findIndex(['nome']);
         const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo']);
 
+        const hasNameColumn = cognomeIndex !== -1 || cognomeNomeIndex !== -1;
+
         const essentialHeadersPresent = 
             (matricolaIndex !== -1) && 
             (gradoIndex !== -1) && 
-            ((cognomeIndex !== -1 && nomeIndex !== -1) || cognomeNomeIndex !== -1);
+            hasNameColumn;
 
         if (!essentialHeadersPresent) {
             const missing = [];
             if (matricolaIndex === -1) missing.push("'Matricola'");
             if (gradoIndex === -1) missing.push("'Grado'");
-            if (cognomeIndex === -1 && nomeIndex === -1 && cognomeNomeIndex === -1) missing.push("almeno una colonna per 'Cognome' e 'Nome' (separate o combinate)");
+            if (!hasNameColumn) missing.push("una colonna per il Cognome (es. 'Cognome' o 'Nominativo')");
             showError(`Intestazioni essenziali mancanti o non riconosciute nella riga 7. Assicurati che il file Excel contenga le colonne: ${missing.join(', ')}.`);
             return;
         }
