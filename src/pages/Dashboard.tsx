@@ -227,9 +227,9 @@ function Dashboard() {
               cognomeNome = '';
           }
 
-          const matricola = matricolaIndex !== -1 ? row[matricolaIndex] : undefined;
-          const grado = gradoIndex !== -1 ? row[gradoIndex] : undefined;
-          const categoria = categoriaIndex !== -1 && valueExists(row[categoriaIndex]) ? row[categoriaIndex] : "";
+          const matricola: string = matricolaIndex !== -1 && valueExists(row[matricolaIndex]) ? String(row[matricolaIndex] as string | number) : "";
+          const grado: string = gradoIndex !== -1 && valueExists(row[gradoIndex]) ? String(row[gradoIndex] as string | number) : "";
+          const categoria: string = categoriaIndex !== -1 && valueExists(row[categoriaIndex]) ? String(row[categoriaIndex] as string | number) : "";
 
           // Controllo rigoroso per dati essenziali
           if (!valueExists(matricola) || !valueExists(grado) || !valueExists(cognomeNome)) {
@@ -243,21 +243,21 @@ function Dashboard() {
 
           // Logging dettagliato per debug
           console.log(`Riga ${headerRowIndex + rowIndex + 2} - Estratto finale:`, {
-            Matricola: String(matricola),
-            Grado_militare: String(grado),
+            Matricola: matricola,
+            Grado_militare: grado,
             "Cognome e Nome del Discente": cognomeNome,
             Cognome: cognome,
             Nome: nome,
-            Categoria: String(categoria),
+            Categoria: categoria,
           });
 
           return {
-            "Matricola": String(matricola),
-            "Grado militare": String(grado),
+            "Matricola": matricola,
+            "Grado militare": grado,
             "Cognome e Nome del Discente": cognomeNome,
             "Cognome": cognome,
             "Nome": nome,
-            "Categoria": String(categoria),
+            "Categoria": categoria,
           };
         }).filter(d => d !== null) as Discente[];
 
