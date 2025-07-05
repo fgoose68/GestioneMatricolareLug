@@ -104,14 +104,10 @@ function Dashboard() {
         let cognome = '';
         let nome = '';
 
-        // Priority 1: Use separate, distinct columns for "Cognome" and "Nome".
-        // This is the most reliable method and is checked first.
-        // The `cognomeIndex !== nomeIndex` check is crucial to avoid matching the same "Cognome e Nome" column twice.
         if (cognomeIndex !== -1 && nomeIndex !== -1 && cognomeIndex !== nomeIndex) {
             cognome = getCellValueAsString(row[cognomeIndex]);
             nome = getCellValueAsString(row[nomeIndex]);
         } 
-        // Priority 2: If separate columns aren't found, look for a single combined column.
         else if (cognomeNomeIndex !== -1) {
             const fullName = getCellValueAsString(row[cognomeNomeIndex]);
             const parts = fullName.split(' ').filter(p => p);
@@ -122,7 +118,6 @@ function Dashboard() {
                 cognome = fullName;
             }
         }
-        // Priority 3: As a fallback, if only a "cognome" column was found, assume it might contain the full name.
         else if (cognomeIndex !== -1) {
             const fullName = getCellValueAsString(row[cognomeIndex]);
             const parts = fullName.split(' ').filter(p => p);
@@ -182,9 +177,19 @@ function Dashboard() {
       for (const discente of discenti) {
         const templateZip = new PizZip(content);
         const doc = new Docxtemplater(templateZip, { paragraphLoop: true, linebreaks: true });
+
+        let categoriaPerTemplate = discente.Categoria;
+        const gradoMilitare = discente["Grado militare"].toUpperCase();
+
+        if (gradoMilitare.includes("CAP") || gradoMilitare.includes("TEN")) {
+          categoriaPerTemplate = "L'Ufficiale";
+        } else if (gradoMilitare.includes("MAR")) {
+          categoriaPerTemplate = "l'Ispettore";
+        }
+
         doc.setData({
           titolocorso: courseInfo.title,
-          categoria: discente.Categoria,
+          categoria: categoriaPerTemplate,
           localita: courseInfo.location,
           periodo_corso: courseInfo.period,
           firmatario: `${signer}\nCol. Massimiliano Fortino`,
