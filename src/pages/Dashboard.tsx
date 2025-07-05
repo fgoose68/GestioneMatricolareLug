@@ -95,19 +95,33 @@ function Dashboard() {
           blankrows: true,
         });
 
-        // Le intestazioni sono fissate alla riga 7 (indice 6)
-        const headerRowIndex = 6; 
-        if (jsonData.length <= headerRowIndex) {
-            showError("Il file Excel non ha abbastanza righe. La riga delle intestazioni (riga 7) non è stata trovata.");
+        let headerRowIndex = -1;
+        let headers: string[] = [];
+        const MAX_HEADER_SEARCH_ROWS = 20;
+
+        for (let i = 0; i < Math.min(jsonData.length, MAX_HEADER_SEARCH_ROWS); i++) {
+            const row = jsonData[i].map(h => getCellValueAsString(h).toLowerCase());
+            const hasMatricola = row.some(h => h.includes('matricola'));
+            const hasGrado = row.some(h => h.includes('grado'));
+            const hasCognome = row.some(h => h.includes('cognome') || h.includes('nominativo'));
+
+            if (hasMatricola && hasGrado && hasCognome) {
+                headerRowIndex = i;
+                headers = row;
+                break;
+            }
+        }
+
+        if (headerRowIndex === -1) {
+            showError("Riga delle intestazioni non trovata nelle prime 20 righe. Assicurati che il file contenga le colonne 'Matricola', 'Grado' e 'Cognome'/'Nominativo'.");
             return;
         }
-        const headers = jsonData[headerRowIndex].map(h => getCellValueAsString(h).toLowerCase());
 
-        // I dati dei discenti partono dalla riga 8 (indice 7)
+        // I dati dei discenti partono dalla riga successiva a quella delle intestazioni
         const dataRows = jsonData.slice(headerRowIndex + 1);
 
         if (dataRows.length === 0) {
-          showError("Nessun discente trovato dopo la riga 7. Controlla che il file Excel contenga dati validi a partire dalla riga 8.");
+          showError(`Nessun discente trovato dopo la riga delle intestazioni (riga ${headerRowIndex + 1}). Controlla il file.`);
           return;
         }
 
@@ -133,7 +147,7 @@ function Dashboard() {
             if (matricolaIndex === -1) missing.push("'Matricola'");
             if (gradoIndex === -1) missing.push("'Grado'");
             if (!hasNameColumn) missing.push("una colonna per il Cognome (es. 'Cognome' o 'Nominativo')");
-            showError(`Intestazioni essenziali mancanti o non riconosciute nella riga 7. Assicurati che il file Excel contenga le colonne: ${missing.join(', ')}.`);
+            showError(`Intestazioni essenziali mancanti o non riconosciute nella riga ${headerRowIndex + 1}. Assicurati che il file Excel contenga le colonne: ${missing.join(', ')}.`);
             return;
         }
 
