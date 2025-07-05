@@ -200,39 +200,48 @@ function Dashboard() {
         <p className="text-muted-foreground">Genera documenti personalizzati in pochi passaggi.</p>
       </header>
 
-      <ResizablePanelGroup direction="horizontal" className="flex-grow rounded-lg border">
-        <ResizablePanel defaultSize={40} minSize={30}>
+      <ResizablePanelGroup direction="vertical" className="flex-grow rounded-lg border">
+        <ResizablePanel defaultSize={50} minSize={30}>
           <div className="p-6 space-y-8 h-full overflow-y-auto">
-            <Step step={1} title="Carica i File" />
-            <FileUpload
-              id="excel-file"
-              label="File Dati Discenti"
-              file={excelFile}
-              onUpload={handleExcelUpload}
-              onRemove={() => { setExcelFile(null); setDiscenti([]); setCourseInfo(null); }}
-              accept=".xlsx"
-              helpText="Carica il file Excel con i dati dei discenti."
-            />
-            <FileUpload
-              id="word-file"
-              label="Template Documento"
-              file={wordFile}
-              onUpload={handleWordUpload}
-              onRemove={() => setWordFile(null)}
-              accept=".docx"
-              helpText="Carica il template Word (.docx) con i segnaposto."
-            />
-
-            <Step step={2} title="Scegli il Firmatario" />
-            <RadioGroup value={signer} onValueChange={setSigner} className="space-y-2">
-              <div className="flex items-center space-x-2"><RadioGroupItem value="Il Direttore del Corso" id="r1" /><Label htmlFor="r1">Il Direttore del Corso</Label></div>
-              <div className="flex items-center space-x-2"><RadioGroupItem value="Il Comandante del Centro" id="r2" /><Label htmlFor="r2">Il Comandante del Centro</Label></div>
-            </RadioGroup>
-            <p className="text-sm text-muted-foreground">Il titolo apparirà sopra: <strong>Col. Massimiliano Fortino</strong>.</p>
+            <div className="grid md:grid-cols-2 gap-8">
+              <div>
+                <Step step={1} title="Carica i File" />
+                <div className="space-y-4 mt-4">
+                  <FileUpload
+                    id="excel-file"
+                    label="File Dati Discenti"
+                    file={excelFile}
+                    onUpload={handleExcelUpload}
+                    onRemove={() => { setExcelFile(null); setDiscenti([]); setCourseInfo(null); }}
+                    accept=".xlsx"
+                    helpText="Carica il file Excel con i dati dei discenti."
+                  />
+                  <FileUpload
+                    id="word-file"
+                    label="Template Documento"
+                    file={wordFile}
+                    onUpload={handleWordUpload}
+                    onRemove={() => setWordFile(null)}
+                    accept=".docx"
+                    helpText="Carica il template Word (.docx) con i segnaposto."
+                  />
+                </div>
+              </div>
+              <div>
+                <Step step={2} title="Scegli il Firmatario" />
+                <div className="mt-4">
+                  <RadioGroup value={signer} onValueChange={setSigner} className="space-y-2">
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="Il Direttore del Corso" id="r1" /><Label htmlFor="r1">Il Direttore del Corso</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="Il Comandante del Centro" id="r2" /><Label htmlFor="r2">Il Comandante del Centro</Label></div>
+                  </RadioGroup>
+                  <p className="text-sm text-muted-foreground mt-2">Il titolo apparirà sopra: <strong>Col. Massimiliano Fortino</strong>.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </ResizablePanel>
         <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={60} minSize={40}>
+        <ResizablePanel defaultSize={50} minSize={30}>
           <div className="p-6 h-full flex flex-col">
             <Step step={3} title="Anteprima e Generazione" />
             {courseInfo && (
