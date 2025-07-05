@@ -94,11 +94,13 @@ function Dashboard() {
         const headerRowIndex = 6; 
 
         if (jsonData.length <= headerRowIndex) {
-            showError("Il file Excel non contiene abbastanza righe per trovare le intestazioni alla riga 7.");
+            showError("Il file Excel non contiene abbastanza righe per trovare le intestazioni alla riga 7. Assicurati che la riga 7 contenga le intestazioni.");
             return;
         }
 
         const headers = jsonData[headerRowIndex].map(h => String(h).toLowerCase().trim());
+        console.log("DEBUG: Extracted Headers:", headers); // Add logging for headers
+
         const dataRows = jsonData.slice(headerRowIndex + 1);
 
         if (dataRows.length === 0) {
@@ -116,11 +118,28 @@ function Dashboard() {
         const nomeIndex = findIndex(['nome']);       // Check for separate nome first
         const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo']); // Combined name last
 
+        // Validate essential headers
+        const essentialHeadersPresent = 
+            (matricolaIndex !== -1) && 
+            (gradoIndex !== -1) && 
+            ((cognomeIndex !== -1 && nomeIndex !== -1) || cognomeNomeIndex !== -1);
+
+        if (!essentialHeadersPresent) {
+            const missing = [];
+            if (matricolaIndex === -1) missing.push("'Matricola'");
+            if (gradoIndex === -1) missing.push("'Grado'");
+            if (cognomeIndex === -1 && nomeIndex === -1 && cognomeNomeIndex === -1) missing.push("almeno una colonna per 'Cognome' e 'Nome' (separate o combinate)");
+            showError(`Intestazioni essenziali mancanti. Assicurati che il file Excel contenga le colonne: ${missing.join(', ')} alla riga 7.`);
+            return;
+        }
+
+
         const valueExists = (val: any) => val !== null && val !== undefined && String(val).trim() !== '';
 
         const discentiData = dataRows.map((row, rowIndex) => {
           // Salta righe completamente vuote
           if (row.every(cell => !valueExists(cell))) {
+            console.log(`DEBUG: Skipping empty row at index ${rowIndex}`);
             return null; 
           }
 
@@ -202,7 +221,7 @@ function Dashboard() {
               }
           } else {
               // If no valid name columns found, set to empty to avoid undefined in table
-              console.warn(`Riga ${headerRowIndex + rowIndex + 2} del file Excel saltata perché mancano dati essenziali per Cognome e Nome. Dati letti:`, { matricola, grado, cognomeNome, cognome, nome, categoria });
+              console.warn(`Riga ${headerRowIndex + rowIndex + 2} del file Excel: Nessun dato valido per Cognome e Nome. Dati riga:`, row);
               cognome = '';
               nome = '';
               cognomeNome = '';
@@ -251,7 +270,8 @@ function Dashboard() {
         }
       } catch (error) {
         console.error("Errore imprevisto durante la lettura del file Excel:", error);
-        showError("Errore durante l'elaborazione del file. Assicurati che sia un file .xlsx valido e non corrotto.");
+        // More specific error message for XLSX parsing issues
+        showError("Errore durante l'elaborazione del file Excel. Assicurati che sia un file .xlsx valido e non corrotto, e che la struttura dei dati sia come previsto.");
         setDiscenti([]);
         setCourseInfo(null);
       }
