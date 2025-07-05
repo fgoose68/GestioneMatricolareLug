@@ -204,19 +204,22 @@ function Dashboard() {
                           cognome = fullName;
                           nome = '';
                       }
-                  } else { 
-                      // All parts are uppercase (e.g., "IMPERIALE FABRIZIO", "DE ROSSI", "ROSSI ROSSI")
-                      if (parts.length >= 2 && parts[0].toUpperCase() === parts[1].toUpperCase()) {
-                          // Specific case: "ROSSI ROSSI" -> Cognome: ROSSI, Nome: ""
-                          cognome = parts[0]; 
-                          nome = ''; 
-                      } else {
-                          // For all other all-uppercase cases (e.g., "IMPERIALE FABRIZIO", "DE ROSSI"),
-                          // assume the entire string is the surname, and name is empty.
-                          // This is a safer default to avoid incorrect splitting for complex surnames.
-                          cognome = fullName;
-                          nome = '';
-                      }
+                  } else {
+                    // All parts are uppercase (e.g., "ROSSI MARIO", "DE ROSSI GIUSEPPE", "ROSSI ROSSI")
+                    if (parts.length === 2 && parts[0] === parts[1]) {
+                        // Handles special case like "ROSSI ROSSI", treating it as a single surname.
+                        cognome = fullName;
+                        nome = '';
+                    } else if (parts.length >= 2) {
+                        // Assumes the last word is the first name and the rest is the surname.
+                        // This correctly handles "DE ROSSI GIUSEPPE" -> cognome: "DE ROSSI", nome: "GIUSEPPE"
+                        nome = parts.pop() as string;
+                        cognome = parts.join(' ');
+                    } else {
+                        // If only one word, it's the surname.
+                        cognome = fullName;
+                        nome = '';
+                    }
                   }
               }
           } else {
