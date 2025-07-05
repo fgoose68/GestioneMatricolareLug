@@ -110,7 +110,6 @@ function Dashboard() {
             if ((hasMatricola && hasGrado) || (hasMatricola && hasName) || (hasGrado && hasName)) {
                 headerRowIndex = i;
                 headers = rowAsHeaders;
-                console.log(`DEBUG: Trovata riga intestazioni all'indice ${i} (riga ${i + 1} in Excel).`);
                 break;
             }
         }
@@ -163,20 +162,28 @@ function Dashboard() {
           let nome: string = '';
 
           if (cognomeIndex !== -1 && nomeIndex !== -1 && valueExists(row[cognomeIndex]) && valueExists(row[nomeIndex])) {
+              // Priority 1: Use separate Cognome and Nome columns if available
               cognome = String(row[cognomeIndex]).trim();
               nome = String(row[nomeIndex]).trim();
               cognomeNome = `${cognome} ${nome}`.trim();
           } 
           else if (cognomeNomeIndex !== -1 && valueExists(row[cognomeNomeIndex])) {
+              // Priority 2: Process combined "Cognome e Nome" or "Nominativo" column
               const fullName = String(row[cognomeNomeIndex]).trim();
               cognomeNome = fullName;
               const parts = fullName.split(' ').filter(p => p.length > 0);
-              if (parts.length === 1) {
+
+              if (parts.length === 0) {
+                  cognome = '';
+                  nome = '';
+              } else if (parts.length === 1) {
                   cognome = parts[0];
                   nome = '';
-              } else if (parts.length > 1) {
+              } else {
                   const allPartsAreUppercase = parts.every(part => part.toUpperCase() === part);
                   if (!allPartsAreUppercase) {
+                      // Mixed case (e.g., "ROSSI Mario", "DE ROSSI Mario")
+                      // Find the first part that is not all uppercase, assume it's the start of the name.
                       let nameStartIndex = -1;
                       for (let i = 0; i < parts.length; i++) {
                           if (parts[i].toUpperCase() !== parts[i]) {
@@ -188,32 +195,41 @@ function Dashboard() {
                           cognome = parts.slice(0, nameStartIndex).join(' ');
                           nome = parts.slice(nameStartIndex).join(' ');
                       } else {
+                          // Fallback if no mixed-case part found but not all parts are uppercase
                           cognome = fullName;
                           nome = '';
                       }
-                  } else {
+                  } else { 
+                      // All parts are uppercase (e.g., "IMPERIALE FABRIZIO", "DE ROSSI", "ROSSI ROSSI")
                       if (parts.length >= 2 && parts[0].toUpperCase() === parts[1].toUpperCase()) {
+                          // Specific case: "ROSSI ROSSI" -> Cognome: ROSSI, Nome: ""
                           cognome = parts[0]; 
-                          nome = parts[1];
+                          nome = ''; 
                       } else {
-                          const lastPart = parts[parts.length - 1]; 
-                          cognome = parts.slice(0, parts.length - 1).join(' ');
-                          nome = lastPart;
+                          // For all other all-uppercase cases (e.g., "IMPERIALE FABRIZIO", "DE ROSSI"),
+                          // assume the entire string is the surname, and name is empty.
+                          // This is a safer default to avoid incorrect splitting for complex surnames.
+                          cognome = fullName;
+                          nome = '';
                       }
                   }
               }
+          } else {
+              // If no valid name columns found, set to empty
+              cognome = '';
+              nome = '';
+              cognomeNome = '';
           }
 
-          const matricola = matricolaIndex !== -1 ? String(row[matricolaIndex] ?? '').trim() : '';
-          const grado = gradoIndex !== -1 ? String(row[gradoIndex] ?? '').trim() : '';
-          const categoria = categoriaIndex !== -1 ? String(row[categoriaIndex] ?? '').trim() : '';
+          const matricola: string = String(row[matricolaIndex] ?? '').trim();
+          const grado: string = String(row[gradoIndex] ?? '').trim();
+          const categoria: string = String(row[categoriaIndex] ?? '').trim();
 
           if (!matricola || !grado || !cognomeNome) {
             const missingFields = [];
             if (!matricola) missingFields.push("Matricola");
             if (!grado) missingFields.push("Grado militare");
             if (!cognomeNome) missingFields.push("Cognome e Nome");
-            console.warn(`Riga ${headerRowIndex + rowIndex + 2} del file Excel saltata perché mancano dati essenziali: ${missingFields.join(', ')}.`);
             return null;
           }
 
