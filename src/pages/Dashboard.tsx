@@ -181,7 +181,7 @@ function Dashboard() {
         outputZip.file(`Attestato_${discente["Cognome e Nome del Discente"].replace(/[^a-zA-Z0-9]/g, '_')}.docx`, out);
       }
       const zipBlob = await outputZip.generateAsync({ type: "blob" });
-      saveAs(zipBlob, "documenti_individuali_docx.zip");
+      saveAs(zipBlob, "documenti_individuali.zip");
       dismissToast(toastId);
       showSuccess("Archivio ZIP con documenti DOCX generato con successo!");
     } catch (error: any) {
