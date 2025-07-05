@@ -178,49 +178,18 @@ function Dashboard() {
               cognomeNome = fullName;
               const parts = fullName.split(' ').filter(p => p.length > 0);
 
-              if (parts.length === 0) {
-                  cognome = '';
-                  nome = '';
+              if (parts.length > 1) {
+                // If more than one part, assume the last part is the name and the rest is the surname.
+                nome = parts.pop() as string;
+                cognome = parts.join(' ');
               } else if (parts.length === 1) {
-                  cognome = parts[0];
-                  nome = '';
+                // If only one part, it's the surname.
+                cognome = parts[0];
+                nome = '';
               } else {
-                  const allPartsAreUppercase = parts.every(part => part.toUpperCase() === part);
-                  if (!allPartsAreUppercase) {
-                      // Mixed case (e.g., "ROSSI Mario", "DE ROSSI Mario")
-                      // Find the first part that is not all uppercase, assume it's the start of the name.
-                      let nameStartIndex = -1;
-                      for (let i = 0; i < parts.length; i++) {
-                          if (parts[i].toUpperCase() !== parts[i]) {
-                              nameStartIndex = i;
-                              break;
-                          }
-                      }
-                      if (nameStartIndex !== -1) {
-                          cognome = parts.slice(0, nameStartIndex).join(' ');
-                          nome = parts.slice(nameStartIndex).join(' ');
-                      } else {
-                          // Fallback if no mixed-case part found but not all parts are uppercase
-                          cognome = fullName;
-                          nome = '';
-                      }
-                  } else {
-                    // All parts are uppercase (e.g., "ROSSI MARIO", "DE ROSSI GIUSEPPE", "ROSSI ROSSI")
-                    if (parts.length === 2 && parts[0] === parts[1]) {
-                        // Handles special case like "ROSSI ROSSI", treating it as a single surname.
-                        cognome = fullName;
-                        nome = '';
-                    } else if (parts.length >= 2) {
-                        // Assumes the last word is the first name and the rest is the surname.
-                        // This correctly handles "DE ROSSI GIUSEPPE" -> cognome: "DE ROSSI", nome: "GIUSEPPE"
-                        nome = parts.pop() as string;
-                        cognome = parts.join(' ');
-                    } else {
-                        // If only one word, it's the surname.
-                        cognome = fullName;
-                        nome = '';
-                    }
-                  }
+                // Empty or whitespace only
+                cognome = '';
+                nome = '';
               }
           } else {
               // If no valid name columns found, set to empty
