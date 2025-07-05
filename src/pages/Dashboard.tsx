@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Download, Info } from "lucide-react";
 import { format } from "date-fns";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import { Step } from "@/components/Step";
 import { FileUpload } from "@/components/FileUpload";
 
 import * as XLSX from "xlsx";
@@ -194,58 +192,61 @@ function Dashboard() {
   };
 
   return (
-    <div className="container mx-auto p-4 h-screen flex flex-col">
-      <header className="text-center mb-6">
+    <div className="container mx-auto p-4 md:p-6 lg:p-8">
+      <header className="text-center mb-8">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard Stampa Unione</h1>
         <p className="text-muted-foreground">Genera documenti personalizzati in pochi passaggi.</p>
       </header>
 
-      <ResizablePanelGroup direction="vertical" className="flex-grow rounded-lg border">
-        <ResizablePanel defaultSize={50} minSize={30}>
-          <div className="p-6 space-y-8 h-full overflow-y-auto">
+      <div className="space-y-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Passo 1 & 2: Configurazione</CardTitle>
+            <CardDescription>Carica i file necessari e scegli il firmatario per i documenti.</CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="grid md:grid-cols-2 gap-8">
-              <div>
-                <Step step={1} title="Carica i File" />
-                <div className="space-y-4 mt-4">
-                  <FileUpload
-                    id="excel-file"
-                    label="File Dati Discenti"
-                    file={excelFile}
-                    onUpload={handleExcelUpload}
-                    onRemove={() => { setExcelFile(null); setDiscenti([]); setCourseInfo(null); }}
-                    accept=".xlsx"
-                    helpText="Carica il file Excel con i dati dei discenti."
-                  />
-                  <FileUpload
-                    id="word-file"
-                    label="Template Documento"
-                    file={wordFile}
-                    onUpload={handleWordUpload}
-                    onRemove={() => setWordFile(null)}
-                    accept=".docx"
-                    helpText="Carica il template Word (.docx) con i segnaposto."
-                  />
-                </div>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Carica i File</h3>
+                <FileUpload
+                  id="excel-file"
+                  label="File Dati Discenti"
+                  file={excelFile}
+                  onUpload={handleExcelUpload}
+                  onRemove={() => { setExcelFile(null); setDiscenti([]); setCourseInfo(null); }}
+                  accept=".xlsx"
+                  helpText="Carica il file Excel con i dati dei discenti."
+                />
+                <FileUpload
+                  id="word-file"
+                  label="Template Documento"
+                  file={wordFile}
+                  onUpload={handleWordUpload}
+                  onRemove={() => setWordFile(null)}
+                  accept=".docx"
+                  helpText="Carica il template Word (.docx) con i segnaposto."
+                />
               </div>
-              <div>
-                <Step step={2} title="Scegli il Firmatario" />
-                <div className="mt-4">
-                  <RadioGroup value={signer} onValueChange={setSigner} className="space-y-2">
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="Il Direttore del Corso" id="r1" /><Label htmlFor="r1">Il Direttore del Corso</Label></div>
-                    <div className="flex items-center space-x-2"><RadioGroupItem value="Il Comandante del Centro" id="r2" /><Label htmlFor="r2">Il Comandante del Centro</Label></div>
-                  </RadioGroup>
-                  <p className="text-sm text-muted-foreground mt-2">Il titolo apparirà sopra: <strong>Col. Massimiliano Fortino</strong>.</p>
-                </div>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Scegli il Firmatario</h3>
+                <RadioGroup value={signer} onValueChange={setSigner} className="space-y-2 pt-2">
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="Il Direttore del Corso" id="r1" /><Label htmlFor="r1">Il Direttore del Corso</Label></div>
+                  <div className="flex items-center space-x-2"><RadioGroupItem value="Il Comandante del Centro" id="r2" /><Label htmlFor="r2">Il Comandante del Centro</Label></div>
+                </RadioGroup>
+                <p className="text-sm text-muted-foreground pt-2">Il titolo apparirà sopra: <strong>Col. Massimiliano Fortino</strong>.</p>
               </div>
             </div>
-          </div>
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={50} minSize={30}>
-          <div className="p-6 h-full flex flex-col">
-            <Step step={3} title="Anteprima e Generazione" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Passo 3: Anteprima e Generazione</CardTitle>
+            <CardDescription>Controlla i dati estratti e genera i documenti finali.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
             {courseInfo && (
-              <Card className="my-6">
+              <Card>
                 <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Info size={16} /> Dati del Corso</CardTitle></CardHeader>
                 <CardContent className="text-sm space-y-1">
                   <p><strong>Titolo:</strong> {courseInfo.title}</p>
@@ -255,9 +256,9 @@ function Dashboard() {
               </Card>
             )}
             {discenti.length > 0 ? (
-              <div className="flex-grow flex flex-col min-h-0">
-                <p className="mb-2"><strong>Discenti Trovati:</strong> <span className="font-mono p-1 bg-muted rounded-md">{discenti.length}</span></p>
-                <div className="flex-grow overflow-y-auto rounded-md border">
+              <div className="space-y-2">
+                <p><strong>Discenti Trovati:</strong> <span className="font-mono p-1 bg-muted rounded-md">{discenti.length}</span></p>
+                <div className="rounded-md border max-h-[400px] overflow-y-auto">
                   <Table>
                     <TableHeader><TableRow><TableHead>Matricola</TableHead><TableHead>Grado</TableHead><TableHead>Cognome</TableHead><TableHead>Nome</TableHead></TableRow></TableHeader>
                     <TableBody>
@@ -269,18 +270,18 @@ function Dashboard() {
                 </div>
               </div>
             ) : (
-              <div className="flex-grow flex items-center justify-center text-center text-muted-foreground bg-muted/50 rounded-md">
+              <div className="flex items-center justify-center text-center text-muted-foreground bg-muted/50 rounded-md p-8">
                 <p>I dati dei discenti appariranno qui dopo il caricamento del file Excel.</p>
               </div>
             )}
-            <div className="mt-auto pt-6 flex gap-4">
+            <div className="pt-4">
               <Button size="lg" onClick={handleGenerateDocument} className="w-full" disabled={!wordFile || discenti.length === 0}>
                 <Download className="mr-2 h-5 w-5" /> Genera Modelli L
               </Button>
             </div>
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
