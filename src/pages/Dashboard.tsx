@@ -185,6 +185,8 @@ function Dashboard() {
           categoriaPerTemplate = "l'Ufficiale";
         } else if (gradoMilitare.includes("MAR")) {
           categoriaPerTemplate = "l'Ispettore";
+        } else if (gradoMilitare.includes("BRIG.C") || gradoMilitare.includes("VBRIG")) {
+          categoriaPerTemplate = "il Sovrintendente";
         }
 
         doc.setData({
