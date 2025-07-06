@@ -76,7 +76,12 @@ function Dashboard() {
       let headers: string[] = [];
       for (let i = 0; i < Math.min(jsonData.length, 20); i++) {
         const row = jsonData[i].map(h => getCellValueAsString(h).toLowerCase());
-        if (row.some(h => h.includes('matricola')) && row.some(h => h.includes('grado')) && row.some(h => h.includes('cognome') || h.includes('nominativo'))) {
+        const hasMatricola = row.some(h => h.includes('matricola'));
+        const hasGrado = row.some(h => h.includes('grado'));
+        const hasFullName = row.some(h => h.includes('cognome e nome') || h.includes('nominativo'));
+        const hasSeparateNames = row.some(h => h.includes('cognome')) && row.some(h => h.includes('nome'));
+
+        if (hasMatricola && hasGrado && (hasFullName || hasSeparateNames)) {
           headerRowIndex = i;
           headers = row;
           break;
@@ -84,7 +89,7 @@ function Dashboard() {
       }
 
       if (headerRowIndex === -1) {
-        showError("Riga delle intestazioni non trovata. Assicurati che il file contenga 'Matricola', 'Grado' e 'Cognome'.");
+        showError("Riga intestazioni non trovata. Assicurati che il file contenga 'Matricola', 'Grado', e ('Cognome' e 'Nome' o 'Nominativo').");
         return;
       }
 
