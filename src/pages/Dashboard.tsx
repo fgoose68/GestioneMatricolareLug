@@ -187,6 +187,8 @@ function Dashboard() {
           categoriaPerTemplate = "l'Ispettore";
         } else if (gradoMilitare.includes("BRIG.C") || gradoMilitare.includes("VBRIG")) {
           categoriaPerTemplate = "il Sovrintendente";
+        } else if (gradoMilitare.includes("APP") || gradoMilitare.includes("APS")) {
+          categoriaPerTemplate = "il Graduato";
         }
 
         doc.setData({
