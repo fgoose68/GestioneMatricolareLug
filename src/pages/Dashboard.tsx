@@ -224,6 +224,75 @@ function Dashboard() {
     }
   };
 
+  const handleGenerateSingleDocument = async () => {
+    if (!wordFile || discenti.length === 0 || !courseInfo) {
+      showError("Carica il file Excel e il template Word prima di generare i documenti.");
+      return;
+    }
+    const toastId = showLoading("Generazione del documento unico in corso...");
+    try {
+      const content = await wordFile.arrayBuffer();
+      const templateZip = new PizZip(content);
+      const doc = new Docxtemplater(templateZip, {
+        paragraphLoop: true,
+        linebreaks: true,
+      });
+
+      const discentiData = discenti.map(discente => {
+        let categoriaPerTemplate = discente.Categoria;
+        const gradoMilitare = discente["Grado militare"].toUpperCase();
+
+        if (gradoMilitare.includes("CAP") || gradoMilitare.includes("TEN")) {
+          categoriaPerTemplate = "l'Ufficiale";
+        } else if (gradoMilitare.includes("MAR")) {
+          categoriaPerTemplate = "l'Ispettore";
+        } else if (gradoMilitare.includes("BRIG.C") || gradoMilitare.includes("VBRIG")) {
+          categoriaPerTemplate = "il Sovrintendente";
+        } else if (gradoMilitare.includes("APP") || gradoMilitare.includes("APS")) {
+          categoriaPerTemplate = "il Graduato";
+        }
+
+        return {
+          grado: discente["Grado militare"],
+          cognome_nome: discente["Cognome e Nome del Discente"],
+          cognome: discente.Cognome,
+          nome: discente.Nome,
+          matricola: discente.Matricola,
+          categoria: categoriaPerTemplate,
+        };
+      });
+
+      doc.setData({
+        titolocorso: courseInfo.title,
+        localita: courseInfo.location,
+        periodo_corso: courseInfo.period,
+        firmatario: `${signer}\nCol. Massimiliano Fortino`,
+        datafirma: courseInfo.currentDate,
+        discenti: discentiData,
+      });
+
+      doc.render();
+
+      const out = doc.getZip().generate({
+        type: "blob",
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      
+      saveAs(out, "documento_unico.docx");
+      
+      dismissToast(toastId);
+      showSuccess("Documento unico generato con successo!");
+    } catch (error: any) {
+      dismissToast(toastId);
+      console.error("Errore nella generazione del documento unico:", error);
+      if (error.properties && error.properties.id === 'scope_error') {
+          showError("Errore nel template: assicurati di aver inserito i tag di loop {#discenti} e {/discenti} nel tuo file Word.");
+      } else {
+          showError(`Errore durante la generazione: ${error.message}`);
+      }
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
       <header className="text-center mb-8">
@@ -307,9 +376,12 @@ function Dashboard() {
                 <p>I dati dei discenti appariranno qui dopo il caricamento del file Excel.</p>
               </div>
             )}
-            <div className="pt-4">
+            <div className="pt-4 flex flex-col space-y-2">
               <Button size="lg" onClick={handleGenerateDocument} className="w-full" disabled={!wordFile || discenti.length === 0}>
                 <Download className="mr-2 h-5 w-5" /> Genera Modelli L
+              </Button>
+              <Button size="lg" onClick={handleGenerateSingleDocument} className="w-full" variant="secondary" disabled={!wordFile || discenti.length === 0}>
+                <Download className="mr-2 h-5 w-5" /> Modelli L Unici
               </Button>
             </div>
           </CardContent>
