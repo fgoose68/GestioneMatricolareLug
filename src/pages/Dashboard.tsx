@@ -12,7 +12,7 @@ import { FileUpload } from "@/components/FileUpload";
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
-import { saveAs } from "file-saver";
+import { saveAs } => "file-saver";
 import JSZip from "jszip";
 
 const getCellValueAsString = (cellValue: any): string => {
@@ -63,7 +63,7 @@ function Dashboard() {
       const startDate = worksheet['D6']?.v ? (worksheet['D6'].v instanceof Date ? format(worksheet['D6'].v, "dd/MM/yyyy") : getCellValueAsString(worksheet['D6'].v)) : "";
       const endDate = worksheet['E6']?.v ? (worksheet['E6'].v instanceof Date ? format(worksheet['E6'].v, "dd/MM/yyyy") : getCellValueAsString(worksheet['E6'].v)) : "";
 
-      if (!title || !location || !startDate) { // endDate is now optional
+      if (!title || !location || !startDate) { 
         showError("Dati corso mancanti o non validi nelle celle A5, C6, D6. Controlla il file.");
         return;
       }
@@ -72,7 +72,7 @@ function Dashboard() {
       if (endDate) {
         period = `dal ${startDate} al ${endDate}`;
       } else {
-        period = `del ${startDate}`; // For single-day courses
+        period = `il ${startDate}`; // Changed from 'del' to 'il'
       }
 
       setCourseInfo({ title, location, period, currentDate: format(new Date(), "dd/MM/yyyy") });
