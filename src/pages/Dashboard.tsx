@@ -304,10 +304,24 @@ function Dashboard() {
                 <p><strong>Discenti Trovati:</strong> <span className="font-mono p-1 bg-muted rounded-md">{discenti.length}</span></p>
                 <div className="rounded-md border max-h-[400px] overflow-y-auto">
                   <Table>
-                    <TableHeader><TableRow><TableHead>Matricola</TableHead><TableHead>Grado</TableHead><TableHead>Cognome</TableHead><TableHead>Nome</TableHead></TableRow></TableHeader>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Matricola</TableHead>
+                        <TableHead>Grado</TableHead>
+                        <TableHead>Cognome</TableHead>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Categoria</TableHead>{/* Nuova colonna */}
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                       {discenti.map((d, index) => (
-                        <TableRow key={index}><TableCell>{d.Matricola}</TableCell><TableCell>{d["Grado militare"]}</TableCell><TableCell>{d.Cognome}</TableCell><TableCell>{d.Nome}</TableCell></TableRow>
+                        <TableRow key={index}>
+                          <TableCell>{d.Matricola}</TableCell>
+                          <TableCell>{d["Grado militare"]}</TableCell>
+                          <TableCell>{d.Cognome}</TableCell>
+                          <TableCell>{d.Nome}</TableCell>
+                          <TableCell>{d.Categoria}</TableCell>{/* Dati della nuova colonna */}
+                        </TableRow>
                       ))}
                     </TableBody>
                   </Table>
