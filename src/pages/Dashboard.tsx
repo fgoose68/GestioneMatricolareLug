@@ -103,68 +103,54 @@ function Dashboard() {
       const dataRows = jsonData.slice(headerRowIndex + 1);
       const findIndex = (keywords: string[]) => headers.findIndex(h => keywords.some(kw => h.includes(kw)));
       
-      const matricolaIndex = findIndex(['matricola', 'matr.']);
-      const gradoIndex = findIndex(['grado', 'gr.']);
+      const matricolaIndex = findIndex(['matricola']);
+      const gradoIndex = findIndex(['grado']);
       const categoriaIndex = findIndex(['cat.', 'cat', 'categoria']);
-      const cognomeIndex = findIndex(['cognome', 'cognome del discente', 'cognome discente', 'last name', 'surname', 'cognome allievo', 'allievo cognome']); // Expanded keywords
-      const nomeIndex = findIndex(['nome', 'nome del discente', 'nome discente', 'first name', 'nome allievo', 'allievo nome']); // Expanded keywords
-      const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo', 'cognome nome', 'full name', 'nominativo del discente', 'nominativo discente', 'nome cognome', 'nominativo completo', 'nominativo allievo']); // Expanded keywords
+      const cognomeIndex = findIndex(['cognome', 'cognome del discente', 'cognome discente', 'last name', 'surname']);
+      const nomeIndex = findIndex(['nome', 'nome del discente', 'nome discente', 'first name']);
+      const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo', 'cognome nome', 'full name', 'nominativo del discente']);
 
       const mappedData = dataRows.map((row, rowIndex) => {
         if (row.every(cell => !getCellValueAsString(cell))) return null;
         
         let cognome = '';
         let nome = '';
-        let cognomeNomeCompleto = '';
 
-        // Priority 1: Combined Full Name column
-        if (cognomeNomeIndex !== -1) {
-            cognomeNomeCompleto = getCellValueAsString(row[cognomeNomeIndex]);
-            const parts = cognomeNomeCompleto.split(' ').filter(p => p);
-            if (parts.length > 1) {
-                nome = parts.pop() as string;
-                cognome = parts.join(' ');
-            } else {
-                cognome = cognomeNomeCompleto; // Assume it's just surname if only one part
-                nome = '';
-            }
-        } 
-        // Priority 2: Separate Cognome and Nome columns
-        else if (cognomeIndex !== -1 && nomeIndex !== -1) {
+        if (cognomeIndex !== -1 && nomeIndex !== -1 && cognomeIndex !== nomeIndex) {
             cognome = getCellValueAsString(row[cognomeIndex]);
             nome = getCellValueAsString(row[nomeIndex]);
-            cognomeNomeCompleto = `${cognome} ${nome}`.trim();
         } 
-        // Priority 3: Only Cognome column found. Try to split if it contains a space.
-        else if (cognomeIndex !== -1) {
-            const potentialFullName = getCellValueAsString(row[cognomeIndex]);
-            const parts = potentialFullName.split(' ').filter(p => p);
+        else if (cognomeNomeIndex !== -1) {
+            const fullName = getCellValueAsString(row[cognomeNomeIndex]);
+            const parts = fullName.split(' ').filter(p => p);
             if (parts.length > 1) {
                 nome = parts.pop() as string;
                 cognome = parts.join(' ');
-                cognomeNomeCompleto = potentialFullName;
             } else {
-                cognome = potentialFullName;
-                nome = '';
-                cognomeNomeCompleto = cognome;
+                cognome = fullName;
             }
         }
-        // Priority 4: Only Nome column found (less common, but for completeness)
-        else if (nomeIndex !== -1) {
-            nome = getCellValueAsString(row[nomeIndex]);
-            cognome = '';
-            cognomeNomeCompleto = nome;
+        else if (cognomeIndex !== -1) {
+            const fullName = getCellValueAsString(row[cognomeIndex]);
+            const parts = fullName.split(' ').filter(p => p);
+            if (parts.length > 1) {
+                nome = parts.pop() as string;
+                cognome = parts.join(' ');
+            } else {
+                cognome = fullName;
+            }
         }
 
+        const cognomeNome = `${cognome} ${nome}`.trim();
         const matricola = getCellValueAsString(row[matricolaIndex]);
         const grado = getCellValueAsString(row[gradoIndex]);
 
-        if (!matricola || !grado || !cognomeNomeCompleto) return null;
+        if (!matricola || !grado || !cognomeNome) return null;
         
         return {
           Matricola: matricola,
           "Grado militare": grado,
-          "Cognome e Nome del Discente": cognomeNomeCompleto,
+          "Cognome e Nome del Discente": cognomeNome,
           Cognome: cognome,
           Nome: nome,
           Categoria: getCellValueAsString(row[categoriaIndex]),
@@ -324,7 +310,7 @@ function Dashboard() {
                         <TableHead>Grado</TableHead>
                         <TableHead>Cognome</TableHead>
                         <TableHead>Nome</TableHead>
-                        <TableHead>Categoria</TableHead>
+                        <TableHead>Categoria</TableHead>{/* Nuova colonna */}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -334,7 +320,7 @@ function Dashboard() {
                           <TableCell>{d["Grado militare"]}</TableCell>
                           <TableCell>{d.Cognome}</TableCell>
                           <TableCell>{d.Nome}</TableCell>
-                          <TableCell>{d.Categoria}</TableCell>
+                          <TableCell>{d.Categoria}</TableCell>{/* Dati della nuova colonna */}
                         </TableRow>
                       ))}
                     </TableBody>
