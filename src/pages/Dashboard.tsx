@@ -12,7 +12,7 @@ import { FileUpload } from "@/components/FileUpload";
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
-import { saveAs } from "file-saver"; // Corretto: da '=>' a 'from'
+import { saveAs } from "file-saver";
 import JSZip from "jszip";
 
 const getCellValueAsString = (cellValue: any): string => {
@@ -81,12 +81,20 @@ function Dashboard() {
       const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "", blankrows: true });
       let headerRowIndex = -1;
       let headers: string[] = [];
+
+      // Expanded keywords for header detection
+      const matricolaKeywords = ['matricola', 'matr.'];
+      const gradoKeywords = ['grado', 'grado militare'];
+      const cognomeKeywords = ['cognome'];
+      const nomeKeywords = ['nome'];
+      const cognomeNomeKeywords = ['cognome e nome', 'nominativo', 'cognome nome', 'nominativo completo', 'nome e cognome'];
+
       for (let i = 0; i < Math.min(jsonData.length, 20); i++) {
         const row = jsonData[i].map(h => getCellValueAsString(h).toLowerCase());
-        const hasMatricola = row.some(h => h.includes('matricola'));
-        const hasGrado = row.some(h => h.includes('grado'));
-        const hasFullName = row.some(h => h.includes('cognome e nome') || h.includes('nominativo'));
-        const hasSeparateNames = row.some(h => h.includes('cognome')) && row.some(h => h.includes('nome'));
+        const hasMatricola = matricolaKeywords.some(kw => row.some(h => h.includes(kw)));
+        const hasGrado = gradoKeywords.some(kw => row.some(h => h.includes(kw)));
+        const hasFullName = cognomeNomeKeywords.some(kw => row.some(h => h.includes(kw)));
+        const hasSeparateNames = cognomeKeywords.some(kw => row.some(h => h.includes(kw))) && nomeKeywords.some(kw => row.some(h => h.includes(kw)));
 
         if (hasMatricola && hasGrado && (hasFullName || hasSeparateNames)) {
           headerRowIndex = i;
@@ -103,12 +111,12 @@ function Dashboard() {
       const dataRows = jsonData.slice(headerRowIndex + 1);
       const findIndex = (keywords: string[]) => headers.findIndex(h => keywords.some(kw => h.includes(kw)));
       
-      const matricolaIndex = findIndex(['matricola']);
-      const gradoIndex = findIndex(['grado']);
-      const categoriaIndex = findIndex(['cat.', 'cat', 'categoria']);
-      const cognomeIndex = findIndex(['cognome']);
-      const nomeIndex = findIndex(['nome']);
-      const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo', 'cognome nome']);
+      const matricolaIndex = findIndex(matricolaKeywords);
+      const gradoIndex = findIndex(gradoKeywords);
+      const categoriaIndex = findIndex(['cat.', 'cat', 'categoria', 'categoria militare']); // Categoria keywords
+      const cognomeIndex = findIndex(cognomeKeywords);
+      const nomeIndex = findIndex(nomeKeywords);
+      const cognomeNomeIndex = findIndex(cognomeNomeKeywords);
 
       const mappedData = dataRows.map((row, rowIndex) => {
         if (row.every(cell => !getCellValueAsString(cell))) return null;
@@ -116,28 +124,30 @@ function Dashboard() {
         let cognome = '';
         let nome = '';
 
-        if (cognomeIndex !== -1 && nomeIndex !== -1 && cognomeIndex !== nomeIndex) {
+        // Prioritize separate Cognome and Nome columns
+        if (cognomeIndex !== -1 && nomeIndex !== -1) {
             cognome = getCellValueAsString(row[cognomeIndex]);
             nome = getCellValueAsString(row[nomeIndex]);
-        } 
-        else if (cognomeNomeIndex !== -1) {
+        } else if (cognomeNomeIndex !== -1) {
+            // If no separate columns, try combined "Cognome e Nome" or "Nominativo"
             const fullName = getCellValueAsString(row[cognomeNomeIndex]);
             const parts = fullName.split(' ').filter(p => p);
             if (parts.length > 1) {
-                nome = parts.pop() as string;
-                cognome = parts.join(' ');
+                nome = parts.pop() as string; // Last part is assumed to be the first name
+                cognome = parts.join(' '); // Remaining parts are assumed to be the last name
             } else {
-                cognome = fullName;
+                cognome = fullName; // If only one part, assume it's just the last name
             }
-        }
-        else if (cognomeIndex !== -1) {
-            const fullName = getCellValueAsString(row[cognomeIndex]);
-            const parts = fullName.split(' ').filter(p => p);
+        } else if (cognomeIndex !== -1) {
+            // Fallback: if only a 'Cognome' column is identified, try to split it.
+            // This handles cases where 'Cognome' column might contain 'Cognome Nome' or just 'Cognome'
+            const potentialFullName = getCellValueAsString(row[cognomeIndex]);
+            const parts = potentialFullName.split(' ').filter(p => p);
             if (parts.length > 1) {
                 nome = parts.pop() as string;
                 cognome = parts.join(' ');
             } else {
-                cognome = fullName;
+                cognome = potentialFullName;
             }
         }
 
