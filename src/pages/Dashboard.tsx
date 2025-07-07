@@ -63,11 +63,18 @@ function Dashboard() {
       const startDate = worksheet['D6']?.v ? (worksheet['D6'].v instanceof Date ? format(worksheet['D6'].v, "dd/MM/yyyy") : getCellValueAsString(worksheet['D6'].v)) : "";
       const endDate = worksheet['E6']?.v ? (worksheet['E6'].v instanceof Date ? format(worksheet['E6'].v, "dd/MM/yyyy") : getCellValueAsString(worksheet['E6'].v)) : "";
 
-      if (!title || !location || !startDate || !endDate) {
-        showError("Dati corso mancanti o non validi nelle celle A5, C6, D6, E6. Controlla il file.");
+      if (!title || !location || !startDate) { // endDate is now optional
+        showError("Dati corso mancanti o non validi nelle celle A5, C6, D6. Controlla il file.");
         return;
       }
-      const period = `dal ${startDate} al ${endDate}`;
+      
+      let period = "";
+      if (endDate) {
+        period = `dal ${startDate} al ${endDate}`;
+      } else {
+        period = `del ${startDate}`; // For single-day courses
+      }
+
       setCourseInfo({ title, location, period, currentDate: format(new Date(), "dd/MM/yyyy") });
       showSuccess("Dati del corso estratti con successo.");
 
