@@ -106,9 +106,9 @@ function Dashboard() {
       const matricolaIndex = findIndex(['matricola']);
       const gradoIndex = findIndex(['grado']);
       const categoriaIndex = findIndex(['cat.', 'cat', 'categoria']);
-      const cognomeIndex = findIndex(['cognome', 'cognome del discente', 'cognome discente', 'last name', 'surname']); // Expanded keywords
-      const nomeIndex = findIndex(['nome', 'nome del discente', 'nome discente', 'first name']); // Expanded keywords
-      const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo', 'cognome nome', 'full name', 'nominativo del discente']); // Expanded keywords
+      const cognomeIndex = findIndex(['cognome', 'cognome del discente', 'cognome discente', 'last name', 'surname']);
+      const nomeIndex = findIndex(['nome', 'nome del discente', 'nome discente', 'first name']);
+      const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo', 'cognome nome', 'full name', 'nominativo del discente']);
 
       const mappedData = dataRows.map((row, rowIndex) => {
         if (row.every(cell => !getCellValueAsString(cell))) return null;
@@ -193,14 +193,18 @@ function Dashboard() {
         let categoriaPerTemplate = discente.Categoria;
         const gradoMilitare = discente["Grado militare"].toUpperCase();
 
-        if (gradoMilitare.includes("CAP") || gradoMilitare.includes("TEN")) {
+        // New mapping logic based on the provided image
+        if (['GCA', 'GDV', 'GDB', 'COL', 'TCL', 'MAG', 'CAP', 'TEN', 'STN'].includes(gradoMilitare)) {
           categoriaPerTemplate = "l'Ufficiale";
-        } else if (gradoMilitare.includes("MAR")) {
+        } else if (['LGT.CS', 'LGT', 'MAR.A', 'MAR.C', 'MAR.O', 'MAR'].includes(gradoMilitare)) {
           categoriaPerTemplate = "l'Ispettore";
-        } else if (gradoMilitare.includes("BRIG.C") || gradoMilitare.includes("VBRIG")) {
+        } else if (['BRIG.QS', 'BRIG.C', 'BRIG.', 'V.BRIG.'].includes(gradoMilitare)) {
           categoriaPerTemplate = "il Sovrintendente";
-        } else if (gradoMilitare.includes("APP") || gradoMilitare.includes("APS")) {
-          categoriaPerTemplate = "il Graduato";
+        } else if (['APS.QS', 'APP.SC', 'APP.', 'FIN.SC', 'FIN.'].includes(gradoMilitare)) {
+          categoriaPerTemplate = "il Militare";
+        } else {
+          // Fallback if no specific match is found, use the category from Excel
+          categoriaPerTemplate = discente.Categoria;
         }
 
         doc.setData({
