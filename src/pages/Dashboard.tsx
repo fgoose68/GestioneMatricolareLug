@@ -12,7 +12,7 @@ import { FileUpload } from "@/components/FileUpload";
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
-import { saveAs } from "file-saver"; // Corretto: da '=>' a 'from'
+import { saveAs } from "file-saver";
 import JSZip from "jszip";
 
 const getCellValueAsString = (cellValue: any): string => {
@@ -106,9 +106,9 @@ function Dashboard() {
       const matricolaIndex = findIndex(['matricola']);
       const gradoIndex = findIndex(['grado']);
       const categoriaIndex = findIndex(['cat.', 'cat', 'categoria']);
-      const cognomeIndex = findIndex(['cognome']);
-      const nomeIndex = findIndex(['nome']);
-      const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo', 'cognome nome']);
+      const cognomeIndex = findIndex(['cognome', 'cognome del discente', 'cognome discente', 'last name', 'surname']); // Expanded keywords
+      const nomeIndex = findIndex(['nome', 'nome del discente', 'nome discente', 'first name']); // Expanded keywords
+      const cognomeNomeIndex = findIndex(['cognome e nome', 'nominativo', 'cognome nome', 'full name', 'nominativo del discente']); // Expanded keywords
 
       const mappedData = dataRows.map((row, rowIndex) => {
         if (row.every(cell => !getCellValueAsString(cell))) return null;
