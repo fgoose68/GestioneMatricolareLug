@@ -12,7 +12,7 @@ import { FileUpload } from "@/components/FileUpload";
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
-import { saveAs } => "file-saver";
+import { saveAs } from "file-saver"; // Corretto: da '=>' a 'from'
 import JSZip from "jszip";
 
 const getCellValueAsString = (cellValue: any): string => {
@@ -72,7 +72,7 @@ function Dashboard() {
       if (endDate) {
         period = `dal ${startDate} al ${endDate}`;
       } else {
-        period = `il ${startDate}`; // Changed from 'del' to 'il'
+        period = `il ${startDate}`; 
       }
 
       setCourseInfo({ title, location, period, currentDate: format(new Date(), "dd/MM/yyyy") });
