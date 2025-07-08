@@ -12,7 +12,7 @@ import { FileUpload } from "@/components/FileUpload";
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
-import { saveAs } from "file-saver";
+import { saveAs } => from "file-saver";
 import JSZip from "jszip";
 
 const getCellValueAsString = (cellValue: any): string => {
@@ -193,14 +193,14 @@ function Dashboard() {
         let categoriaPerTemplate = discente.Categoria;
         const gradoMilitare = discente["Grado militare"].toUpperCase();
 
-        // New mapping logic based on the provided image
+        // Updated mapping logic based on the provided image and new rules
         if (['GCA', 'GDV', 'GDB', 'COL', 'TCL', 'MAG', 'CAP', 'TEN', 'STN'].includes(gradoMilitare)) {
           categoriaPerTemplate = "l'Ufficiale";
         } else if (['LGT.CS', 'LGT', 'MAR.A', 'MAR.C', 'MAR.O', 'MAR'].includes(gradoMilitare)) {
           categoriaPerTemplate = "l'Ispettore";
-        } else if (['BRIG.QS', 'BRIG.C', 'BRIG.', 'V.BRIG.'].includes(gradoMilitare)) {
+        } else if (['B.C.QS', 'BRIG.C', 'BRIG', 'VBRIG'].includes(gradoMilitare)) {
           categoriaPerTemplate = "il Sovrintendente";
-        } else if (['APS.QS', 'APP.SC', 'APP.', 'FIN.SC', 'FIN.'].includes(gradoMilitare)) {
+        } else if (['APS.QS', 'APP.SC', 'APP', 'FIN.SC', 'FIN'].includes(gradoMilitare)) {
           categoriaPerTemplate = "il Militare";
         } else {
           // Fallback if no specific match is found, use the category from Excel
@@ -310,7 +310,7 @@ function Dashboard() {
                         <TableHead>Grado</TableHead>
                         <TableHead>Cognome</TableHead>
                         <TableHead>Nome</TableHead>
-                        <TableHead>Categoria</TableHead>{/* Nuova colonna */}
+                        <TableHead>Categoria</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -320,7 +320,7 @@ function Dashboard() {
                           <TableCell>{d["Grado militare"]}</TableCell>
                           <TableCell>{d.Cognome}</TableCell>
                           <TableCell>{d.Nome}</TableCell>
-                          <TableCell>{d.Categoria}</TableCell>{/* Dati della nuova colonna */}
+                          <TableCell>{d.Categoria}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
