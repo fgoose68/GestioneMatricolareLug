@@ -12,7 +12,7 @@ import { FileUpload } from "@/components/FileUpload";
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
-import { saveAs } => from "file-saver";
+import { saveAs } from "file-saver";
 import JSZip from "jszip";
 
 const getCellValueAsString = (cellValue: any): string => {
