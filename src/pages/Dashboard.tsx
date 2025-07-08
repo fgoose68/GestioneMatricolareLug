@@ -337,7 +337,7 @@ function Dashboard() {
                 <Download className="mr-2 h-5 w-5" /> Genera Modelli L
               </Button>
             </div>
-          </CardContent>
+          </Third-party>
         </Card>
       </div>
     </div>
