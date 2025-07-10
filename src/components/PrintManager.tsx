@@ -30,7 +30,7 @@ export function PrintManager() {
       duplex,
     });
 
-    showWarning("La stampa diretta di file .docx non è supportata dal browser.");
+    showWarning("La stampa diretta di file non è possibile dal browser. Questa è una simulazione. Per stampare, i file dovrebbero prima essere convertiti in PDF.");
     showSuccess(`Richiesta di stampa simulata per: ${fileNames}. Copie: ${copies}, Fronte-retro: ${duplex ? 'Sì' : 'No'}.`);
   };
 
