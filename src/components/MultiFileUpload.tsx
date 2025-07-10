@@ -1,12 +1,9 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { File, X, UploadCloud, FileText, Loader2 } from "lucide-react";
+import { File, X, UploadCloud } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import React, { useState } from "react";
-import mammoth from "mammoth";
-import html2pdf from "html2pdf.js";
-import { showSuccess, showError } from "@/utils/toast";
+import React from "react";
 
 interface MultiFileUploadProps {
   id: string;
@@ -19,7 +16,6 @@ interface MultiFileUploadProps {
 
 export function MultiFileUpload({ id, label, files, onFilesChange, accept, helpText }: MultiFileUploadProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [convertingFile, setConvertingFile] = useState<string | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -34,37 +30,6 @@ export function MultiFileUpload({ id, label, files, onFilesChange, accept, helpT
 
   const handleDropzoneClick = () => {
     fileInputRef.current?.click();
-  };
-
-  const handleConvertToPdf = async (file: File) => {
-    setConvertingFile(file.name);
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const { value: html } = await mammoth.convertToHtml({ arrayBuffer });
-
-      const element = document.createElement('div');
-      element.innerHTML = html;
-      element.style.padding = '2rem';
-      element.style.fontFamily = 'Arial, sans-serif';
-      element.style.lineHeight = '1.6';
-
-      const opt = {
-        margin:       [0.5, 0.5, 0.5, 0.5],
-        filename:     `${file.name.replace(/\.docx$/, '')}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-      };
-
-      await html2pdf().from(element).set(opt).save();
-      
-      showSuccess(`${file.name} convertito in PDF con successo!`);
-    } catch (error) {
-      console.error("Errore durante la conversione in PDF:", error);
-      showError(`Errore durante la conversione di ${file.name}.`);
-    } finally {
-      setConvertingFile(null);
-    }
   };
 
   return (
@@ -102,20 +67,6 @@ export function MultiFileUpload({ id, label, files, onFilesChange, accept, helpT
                   <Badge variant="outline" className="flex-shrink-0">{(file.size / 1024).toFixed(2)} KB</Badge>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={(e) => { e.stopPropagation(); handleConvertToPdf(file); }}
-                    disabled={convertingFile === file.name}
-                    className="text-xs px-2 py-1 h-auto"
-                  >
-                    {convertingFile === file.name ? (
-                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                    ) : (
-                      <FileText className="h-4 w-4 mr-1" />
-                    )}
-                    PDF
-                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleRemoveFile(file); }}>
                     <X className="h-4 w-4" />
                   </Button>

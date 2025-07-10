@@ -18,7 +18,7 @@ export function PrintManager() {
 
   const handlePrint = () => {
     if (files.length === 0) {
-      showError("Per favore, carica almeno un file .docx da stampare.");
+      showError("Per favore, carica almeno un file .pdf da stampare.");
       return;
     }
 
@@ -30,7 +30,7 @@ export function PrintManager() {
       duplex,
     });
 
-    showWarning("La stampa diretta di file non è possibile dal browser. Questa è una simulazione. Per stampare, i file dovrebbero prima essere convertiti in PDF.");
+    showWarning("La stampa diretta di file PDF non è possibile dal browser. Questa è una simulazione.");
     showSuccess(`Richiesta di stampa simulata per: ${fileNames}. Copie: ${copies}, Fronte-retro: ${duplex ? 'Sì' : 'No'}.`);
   };
 
@@ -38,24 +38,24 @@ export function PrintManager() {
     <Card>
       <CardHeader>
         <CardTitle>Stampa Documenti</CardTitle>
-        <CardDescription>Carica i documenti .docx, imposta le opzioni e avvia la stampa.</CardDescription>
+        <CardDescription>Carica i documenti .pdf, imposta le opzioni e avvia la stampa.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <Alert variant="default">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Nota sulla Stampa</AlertTitle>
           <AlertDescription>
-            La stampa diretta di file non è possibile dal browser. Questa è una simulazione. Per stampare, i file dovrebbero prima essere convertiti in PDF.
+            La stampa diretta di file PDF non è possibile dal browser. Questa è una simulazione di una richiesta di stampa.
           </AlertDescription>
         </Alert>
 
         <MultiFileUpload
-          id="docx-files"
-          label="Carica Documenti (.docx)"
+          id="pdf-files"
+          label="Carica Documenti (.pdf)"
           files={files}
           onFilesChange={setFiles}
-          accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-          helpText="Puoi selezionare più file."
+          accept=".pdf,application/pdf"
+          helpText="Puoi selezionare più file PDF."
         />
         
         <div className="grid sm:grid-cols-2 gap-6 items-end">
