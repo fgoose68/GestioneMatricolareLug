@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FileUpload } from "@/components/FileUpload";
+import { PrintManager } from "@/components/PrintManager";
 
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
@@ -339,6 +340,7 @@ function Dashboard() {
             </div>
           </CardContent>
         </Card>
+        <PrintManager />
       </div>
     </div>
   );
