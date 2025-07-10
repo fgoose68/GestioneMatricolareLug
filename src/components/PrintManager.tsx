@@ -49,18 +49,17 @@ export function PrintManager() {
           iframe.src = url;
         });
         
-        // Pausa per evitare che le finestre di dialogo si sovrappongano in modo aggressivo
         await new Promise(resolve => setTimeout(resolve, 1000));
 
       } catch (error) {
         console.error("Errore durante la stampa del file:", file.name, error);
         showError(`Impossibile stampare il file ${file.name}.`);
-        break; // Interrompe il ciclo in caso di errore
+        break; 
       }
     }
     
     setIsPrinting(false);
-    if (!isPrinting) { // Evita notifiche multiple
+    if (!isPrinting) {
         showSuccess("Processo di stampa completato.");
     }
   };
@@ -74,9 +73,11 @@ export function PrintManager() {
       <CardContent className="space-y-6">
         <Alert variant="default">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Come funziona la stampa</AlertTitle>
+          <AlertTitle>Come trovare le opzioni di stampa</AlertTitle>
           <AlertDescription>
-            Per motivi di sicurezza, l'applicazione userà la finestra di dialogo di stampa del tuo browser. Potrai selezionare la stampante e le opzioni (copie, fronte-retro, ecc.) direttamente lì.
+            Le opzioni come <strong>Copie</strong> e <strong>Fronte-Retro</strong> (Duplex) si trovano nella finestra di dialogo di stampa del tuo browser.
+            <br />
+            Se non le vedi subito, cerca un link o un pulsante come <strong>"Più impostazioni"</strong>, <strong>"Preferenze"</strong> o <strong>"Stampa utilizzando la finestra di dialogo di sistema"</strong>.
           </AlertDescription>
         </Alert>
 
