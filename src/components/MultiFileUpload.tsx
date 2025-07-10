@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { File, X } from "lucide-react";
+import { File, X, UploadCloud } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import React from "react";
 
@@ -15,10 +15,11 @@ interface MultiFileUploadProps {
 }
 
 export function MultiFileUpload({ id, label, files, onFilesChange, accept, helpText }: MultiFileUploadProps) {
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       onFilesChange([...files, ...Array.from(event.target.files)]);
-      // Reset the input value to allow re-uploading the same file
       event.target.value = '';
     }
   };
@@ -27,11 +28,33 @@ export function MultiFileUpload({ id, label, files, onFilesChange, accept, helpT
     onFilesChange(files.filter(file => file !== fileToRemove));
   };
 
+  const handleDropzoneClick = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} type="file" accept={accept} onChange={handleFileChange} multiple className="cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
-      <p className="text-xs text-muted-foreground pt-1">{helpText}</p>
+      <div 
+        className="relative flex flex-col items-center justify-center w-full p-6 border-2 border-dashed rounded-lg cursor-pointer hover:border-primary/50 transition-colors"
+        onClick={handleDropzoneClick}
+      >
+        <UploadCloud className="w-10 h-10 text-muted-foreground" />
+        <p className="mt-2 text-sm text-muted-foreground">
+          <span className="font-semibold text-primary">Clicca per caricare</span> o trascina i file
+        </p>
+        <p className="text-xs text-muted-foreground">{helpText}</p>
+        <Input 
+          ref={fileInputRef}
+          id={id} 
+          type="file" 
+          accept={accept} 
+          onChange={handleFileChange} 
+          multiple 
+          className="sr-only"
+        />
+      </div>
+      
       {files.length > 0 && (
         <div className="space-y-2 pt-2">
           <p className="text-sm font-medium">File caricati ({files.length}):</p>
@@ -43,7 +66,7 @@ export function MultiFileUpload({ id, label, files, onFilesChange, accept, helpT
                   <span className="truncate">{file.name}</span>
                   <Badge variant="outline" className="flex-shrink-0">{(file.size / 1024).toFixed(2)} KB</Badge>
                 </div>
-                <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={() => handleRemoveFile(file)}>
+                <Button variant="ghost" size="icon" className="flex-shrink-0" onClick={(e) => { e.stopPropagation(); handleRemoveFile(file); }}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>

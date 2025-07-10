@@ -4,7 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Printer } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Printer, AlertTriangle } from "lucide-react";
 import { MultiFileUpload } from "./MultiFileUpload";
 import { showSuccess, showError, showWarning } from "@/utils/toast";
 
@@ -12,6 +14,7 @@ export function PrintManager() {
   const [files, setFiles] = useState<File[]>([]);
   const [copies, setCopies] = useState(1);
   const [duplex, setDuplex] = useState(false);
+  const [selectedPrinter, setSelectedPrinter] = useState("default");
 
   const handlePrint = () => {
     if (files.length === 0) {
@@ -22,6 +25,7 @@ export function PrintManager() {
     const fileNames = files.map(f => f.name).join(', ');
     console.log("Printing request:", {
       files: fileNames,
+      printer: selectedPrinter,
       copies,
       duplex,
     });
@@ -37,6 +41,14 @@ export function PrintManager() {
         <CardDescription>Carica i documenti .docx, imposta le opzioni e avvia la stampa.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <Alert variant="default">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Nota sulla Stampa</AlertTitle>
+          <AlertDescription>
+            La stampa diretta di file non è possibile dal browser. Questa è una simulazione. Per stampare, i file dovrebbero prima essere convertiti in PDF.
+          </AlertDescription>
+        </Alert>
+
         <MultiFileUpload
           id="docx-files"
           label="Carica Documenti (.docx)"
@@ -45,7 +57,19 @@ export function PrintManager() {
           accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           helpText="Puoi selezionare più file."
         />
-        <div className="grid sm:grid-cols-2 gap-4 items-end">
+        
+        <div className="grid sm:grid-cols-2 gap-6 items-end">
+          <div className="space-y-2">
+            <Label htmlFor="printer">Seleziona Stampante</Label>
+            <Select value={selectedPrinter} onValueChange={setSelectedPrinter} disabled>
+              <SelectTrigger id="printer">
+                <SelectValue placeholder="Seleziona una stampante" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Stampante Predefinita</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="copies">Numero di copie</Label>
             <Input
@@ -57,11 +81,13 @@ export function PrintManager() {
               className="w-full"
             />
           </div>
-          <div className="flex items-center space-x-2 pb-2">
-            <Switch id="duplex-printing" checked={duplex} onCheckedChange={setDuplex} />
-            <Label htmlFor="duplex-printing">Stampa fronte-retro</Label>
-          </div>
         </div>
+        
+        <div className="flex items-center space-x-2">
+          <Switch id="duplex-printing" checked={duplex} onCheckedChange={setDuplex} />
+          <Label htmlFor="duplex-printing">Stampa fronte-retro</Label>
+        </div>
+
         <Button size="lg" onClick={handlePrint} className="w-full" disabled={files.length === 0}>
           <Printer className="mr-2 h-5 w-5" /> Stampa
         </Button>
