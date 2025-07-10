@@ -1,2 +1,4 @@
-declare module 'mammoth';
-declare module 'html2pdf.js';
+// @ts-ignore
+declare const mammoth: any;
+// @ts-ignore
+declare const html2pdf: any;

@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { File, X, UploadCloud, FileText, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import React, { useState } from "react";
-import mammoth from "mammoth";
-import html2pdf from "html2pdf.js";
 import { showSuccess, showError } from "@/utils/toast";
 
 interface MultiFileUploadProps {
@@ -40,6 +38,7 @@ export function MultiFileUpload({ id, label, files, onFilesChange, accept, helpT
     setConvertingFile(file.name);
     try {
       const arrayBuffer = await file.arrayBuffer();
+      // @ts-ignore
       const { value: html } = await mammoth.convertToHtml({ arrayBuffer });
 
       const element = document.createElement('div');
@@ -55,7 +54,7 @@ export function MultiFileUpload({ id, label, files, onFilesChange, accept, helpT
         html2canvas:  { scale: 2, useCORS: true, logging: false },
         jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
       };
-
+      // @ts-ignore
       await html2pdf().from(element).set(opt).save();
       
       showSuccess(`${file.name} convertito in PDF con successo!`);
