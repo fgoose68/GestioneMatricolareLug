@@ -9,15 +9,12 @@ import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FileUpload } from "@/components/FileUpload";
 import { PrintManager } from "@/components/PrintManager";
-import { Switch } from "@/components/ui/switch";
 
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
-import * as mammoth from "mammoth";
-import html2pdf from "html2pdf.js";
 
 const getCellValueAsString = (cellValue: any): string => {
   return cellValue !== null && cellValue !== undefined ? String(cellValue).trim() : '';
@@ -45,7 +42,6 @@ function Dashboard() {
   const [discenti, setDiscenti] = useState<Discente[]>([]);
   const [signer, setSigner] = useState<string>("Il Direttore del Corso");
   const [courseInfo, setCourseInfo] = useState<CourseInfo | null>(null);
-  const [outputFormat, setOutputFormat] = useState<'docx' | 'pdf'>('pdf');
 
   const handleExcelUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -187,7 +183,7 @@ function Dashboard() {
       showError("Carica il file Excel e il template Word prima di generare i documenti.");
       return;
     }
-    const toastId = showLoading(`Generazione dei documenti in formato ${outputFormat.toUpperCase()} in corso...`);
+    const toastId = showLoading("Generazione dei documenti in corso...");
     try {
       const content = await wordFile.arrayBuffer();
       const outputZip = new JSZip();
@@ -198,6 +194,7 @@ function Dashboard() {
         let categoriaPerTemplate = discente.Categoria;
         const gradoMilitare = discente["Grado militare"].toUpperCase();
 
+        // Updated mapping logic based on the provided image and new rules
         if (['GCA', 'GDV', 'GDB', 'COL', 'TCL', 'MAG', 'CAP', 'TEN', 'STN'].includes(gradoMilitare)) {
           categoriaPerTemplate = "l'Ufficiale";
         } else if (['LGT.CS', 'LGT', 'MAR.A', 'MAR.C', 'MAR.O', 'MAR'].includes(gradoMilitare)) {
@@ -207,6 +204,7 @@ function Dashboard() {
         } else if (['APS.QS', 'APP.SC', 'APP', 'FIN.SC', 'FIN'].includes(gradoMilitare)) {
           categoriaPerTemplate = "il Militare";
         } else {
+          // Fallback if no specific match is found, use the category from Excel
           categoriaPerTemplate = discente.Categoria;
         }
 
@@ -224,31 +222,13 @@ function Dashboard() {
           datafirma: courseInfo.currentDate,
         });
         doc.render();
-        
-        const fileName = `Attestato_${discente["Cognome e Nome del Discente"].replace(/[^a-zA-Z0-9]/g, '_')}`;
-
-        if (outputFormat === 'pdf') {
-          const docxBuffer = doc.getZip().generate({ type: "arraybuffer" });
-          const { value: html } = await mammoth.convertToHtml({ arrayBuffer: docxBuffer });
-          const element = document.createElement('div');
-          element.innerHTML = `<style> body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; } </style>${html}`;
-          const pdfBlob = await html2pdf().from(element).set({
-            margin: 15,
-            filename: `${fileName}.pdf`,
-            html2canvas: { scale: 2 },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-          }).output('blob');
-          outputZip.file(`${fileName}.pdf`, pdfBlob);
-        } else {
-          const out = doc.getZip().generate({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-          outputZip.file(`${fileName}.docx`, out);
-        }
+        const out = doc.getZip().generate({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+        outputZip.file(`Attestato_${discente["Cognome e Nome del Discente"].replace(/[^a-zA-Z0-9]/g, '_')}.docx`, out);
       }
-      const zipFileName = outputFormat === 'pdf' ? "documenti_pdf.zip" : "documenti_individuali.zip";
       const zipBlob = await outputZip.generateAsync({ type: "blob" });
-      saveAs(zipBlob, zipFileName);
+      saveAs(zipBlob, "documenti_individuali.zip");
       dismissToast(toastId);
-      showSuccess(`Archivio ZIP con documenti ${outputFormat.toUpperCase()} generato con successo!`);
+      showSuccess("Archivio ZIP con documenti DOCX generato con successo!");
     } catch (error: any) {
       dismissToast(toastId);
       console.error("Errore nella generazione del documento:", error);
@@ -353,15 +333,7 @@ function Dashboard() {
                 <p>I dati dei discenti appariranno qui dopo il caricamento del file Excel.</p>
               </div>
             )}
-            <div className="pt-4 flex flex-col space-y-4">
-              <div className="flex items-center justify-center space-x-2">
-                <Switch
-                  id="output-format-switch"
-                  checked={outputFormat === 'pdf'}
-                  onCheckedChange={(checked) => setOutputFormat(checked ? 'pdf' : 'docx')}
-                />
-                <Label htmlFor="output-format-switch">Genera come PDF (invece di DOCX)</Label>
-              </div>
+            <div className="pt-4 flex flex-col space-y-2">
               <Button size="lg" onClick={handleGenerateDocument} className="w-full" disabled={!wordFile || discenti.length === 0}>
                 <Download className="mr-2 h-5 w-5" /> Genera Modelli L
               </Button>
