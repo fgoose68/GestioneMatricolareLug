@@ -16,8 +16,9 @@ import Docxtemplater from "docxtemplater";
 import PizZip from "pizzip";
 import { saveAs } from "file-saver";
 import JSZip from "jszip";
-import * as mammoth from "mammoth";
 import html2pdf from "html2pdf.js";
+import ReactDOMServer from 'react-dom/server';
+import { AttestatoTemplate } from '@/components/AttestatoTemplate';
 
 const getCellValueAsString = (cellValue: any): string => {
   return cellValue !== null && cellValue !== undefined ? String(cellValue).trim() : '';
@@ -183,17 +184,18 @@ function Dashboard() {
   };
 
   const handleGenerateDocument = async () => {
-    if (!wordFile || discenti.length === 0 || !courseInfo) {
-      showError("Carica il file Excel e il template Word prima di generare i documenti.");
+    if ((outputFormat === 'docx' && !wordFile) || !excelFile || discenti.length === 0 || !courseInfo) {
+      showError("Per generare i documenti, carica il file Excel. Per il formato DOCX, è necessario anche il template Word.");
       return;
     }
     const toastId = showLoading(`Generazione dei documenti in formato ${outputFormat.toUpperCase()} in corso...`);
+    
     try {
-      const content = await wordFile.arrayBuffer();
       const outputZip = new JSZip();
+      const docxContent = outputFormat === 'docx' && wordFile ? await wordFile.arrayBuffer() : null;
+
       for (const discente of discenti) {
-        const templateZip = new PizZip(content);
-        const doc = new Docxtemplater(templateZip, { paragraphLoop: true, linebreaks: true });
+        const fileName = `Attestato_${discente["Cognome e Nome del Discente"].replace(/[^a-zA-Z0-9]/g, '_')}`;
 
         let categoriaPerTemplate = discente.Categoria;
         const gradoMilitare = discente["Grado militare"].toUpperCase();
@@ -210,41 +212,51 @@ function Dashboard() {
           categoriaPerTemplate = discente.Categoria;
         }
 
-        doc.setData({
-          titolocorso: courseInfo.title,
-          categoria: categoriaPerTemplate,
-          localita: courseInfo.location,
-          periodo_corso: courseInfo.period,
-          firmatario: `${signer}\nCol. Massimiliano Fortino`,
-          grado: discente["Grado militare"],
-          cognome_nome: discente["Cognome e Nome del Discente"],
-          cognome: discente.Cognome,
-          nome: discente.Nome,
-          matricola: discente.Matricola,
-          datafirma: courseInfo.currentDate,
-        });
-        doc.render();
-        
-        const fileName = `Attestato_${discente["Cognome e Nome del Discente"].replace(/[^a-zA-Z0-9]/g, '_')}`;
-
         if (outputFormat === 'pdf') {
-          const docxBuffer = doc.getZip().generate({ type: "arraybuffer" });
-          const { value: html } = await mammoth.convertToHtml({ arrayBuffer: docxBuffer });
-          const element = document.createElement('div');
-          element.innerHTML = `<style> body { font-family: 'Times New Roman', Times, serif; font-size: 12pt; } </style>${html}`;
-          const pdfBlob = await html2pdf().from(element).set({
-            margin: 15,
+          const componentHtml = ReactDOMServer.renderToString(
+            <AttestatoTemplate
+              courseInfo={courseInfo}
+              discente={discente}
+              signer={signer}
+              categoria={categoriaPerTemplate}
+            />
+          );
+          
+          const pdfBlob = await html2pdf().from(componentHtml).set({
+            margin: 0,
             filename: `${fileName}.pdf`,
-            html2canvas: { scale: 2 },
+            html2canvas: { scale: 2, useCORS: true },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
           }).output('blob');
+
           outputZip.file(`${fileName}.pdf`, pdfBlob);
-        } else {
+
+        } else { // outputFormat is 'docx'
+          if (!docxContent) continue;
+          const templateZip = new PizZip(docxContent);
+          const doc = new Docxtemplater(templateZip, { paragraphLoop: true, linebreaks: true });
+
+          doc.setData({
+            titolocorso: courseInfo.title,
+            categoria: categoriaPerTemplate,
+            localita: courseInfo.location,
+            periodo_corso: courseInfo.period,
+            firmatario: `${signer}\nCol. Massimiliano Fortino`,
+            grado: discente["Grado militare"],
+            cognome_nome: discente["Cognome e Nome del Discente"],
+            cognome: discente.Cognome,
+            nome: discente.Nome,
+            matricola: discente.Matricola,
+            datafirma: courseInfo.currentDate,
+          });
+          doc.render();
+          
           const out = doc.getZip().generate({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
           outputZip.file(`${fileName}.docx`, out);
         }
       }
-      const zipFileName = outputFormat === 'pdf' ? "documenti_pdf.zip" : "documenti_individuali.zip";
+
+      const zipFileName = `documenti_${outputFormat}.zip`;
       const zipBlob = await outputZip.generateAsync({ type: "blob" });
       saveAs(zipBlob, zipFileName);
       dismissToast(toastId);
@@ -284,12 +296,12 @@ function Dashboard() {
                 />
                 <FileUpload
                   id="word-file"
-                  label="Template Documento"
+                  label="Template Documento (per .DOCX)"
                   file={wordFile}
                   onUpload={handleWordUpload}
                   onRemove={() => setWordFile(null)}
                   accept=".docx"
-                  helpText="Carica il template Word (.docx) con i segnaposto."
+                  helpText="Necessario solo per generare file .docx."
                 />
               </div>
               <div className="space-y-4">
@@ -360,9 +372,9 @@ function Dashboard() {
                   checked={outputFormat === 'pdf'}
                   onCheckedChange={(checked) => setOutputFormat(checked ? 'pdf' : 'docx')}
                 />
-                <Label htmlFor="output-format-switch">Genera come PDF (invece di DOCX)</Label>
+                <Label htmlFor="output-format-switch">Genera come PDF (raccomandato, qualità alta)</Label>
               </div>
-              <Button size="lg" onClick={handleGenerateDocument} className="w-full" disabled={!wordFile || discenti.length === 0}>
+              <Button size="lg" onClick={handleGenerateDocument} className="w-full" disabled={(!wordFile && outputFormat === 'docx') || discenti.length === 0}>
                 <Download className="mr-2 h-5 w-5" /> Genera Modelli L
               </Button>
             </div>
