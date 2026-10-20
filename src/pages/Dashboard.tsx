@@ -8,7 +8,6 @@ import { format } from "date-fns";
 import { showError, showSuccess, showLoading, dismissToast } from "@/utils/toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FileUpload } from "@/components/FileUpload";
-import { PrintManager } from "@/components/PrintManager";
 
 import * as XLSX from "xlsx";
 import Docxtemplater from "docxtemplater";
@@ -240,7 +239,7 @@ function Dashboard() {
     <div className="container mx-auto p-4 md:p-6 lg:p-8">
       <header className="text-center mb-8">
         <h1 className="text-3xl font-bold tracking-tight">
-          Gestione Modelli L <span className="text-sm font-normal text-muted-foreground">Ver15.2.Lug25</span>
+          Gestione Modelli L <span className="text-sm font-normal text-muted-foreground">Ver.20.Ott2026</span>
         </h1>
         <p className="text-muted-foreground">Genera documenti personalizzati in pochi passaggi.</p>
       </header>
@@ -342,7 +341,6 @@ function Dashboard() {
             </div>
           </CardContent>
         </Card>
-        <PrintManager />
       </div>
     </div>
   );
