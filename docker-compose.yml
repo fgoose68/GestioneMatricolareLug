@@ -1,0 +1,9 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gestione-matricolare-lug
+    ports:
+      - "2025:80"
+    restart: unless-stopped
